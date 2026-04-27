@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MASDAR STS — DEWA VI Operations Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:    #0a1628;
+  --navy2:   #0d1f3c;
+  --navy3:   #0d2347;
+  --blue:    #1a56db;
+  --blue2:   #2563eb;
+  --cyan:    #06b6d4;
+  --cyan2:   #22d3ee;
+  --gold:    #f59e0b;
+  --green:   #10b981;
+  --white:   #ffffff;
+  --light:   #e2e8f0;
+  --slate:   #94a3b8;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--navy);
+  min-height: 100vh;
+  overflow-x: hidden;
+  color: var(--white);
+}
+
+/* ── BACKGROUND ── */
+.bg {
+  position: fixed; inset: 0; z-index: 0;
+  background: linear-gradient(135deg, #060e1f 0%, #0a1628 40%, #091830 70%, #06101e 100%);
+}
+.bg-grid {
+  position: fixed; inset: 0; z-index: 1;
+  background-image:
+    linear-gradient(rgba(26,86,219,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,86,219,0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 40%, transparent 100%);
+}
+.bg-glow {
+  position: fixed; z-index: 2; border-radius: 50%; filter: blur(80px); pointer-events: none;
+}
+.bg-glow-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(26,86,219,0.18) 0%, transparent 70%);
+  top: -100px; left: -100px;
+  animation: drift1 18s ease-in-out infinite alternate;
+}
+.bg-glow-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%);
+  bottom: -80px; right: -80px;
+  animation: drift2 22s ease-in-out infinite alternate;
+}
+.bg-glow-3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 70%);
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  animation: pulse 8s ease-in-out infinite;
+}
+
+@keyframes drift1  { from { transform: translate(0,0); } to { transform: translate(60px,40px); } }
+@keyframes drift2  { from { transform: translate(0,0); } to { transform: translate(-50px,-30px); } }
+@keyframes pulse   { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+/* ── WRAPPER ── */
+.page {
+  position: relative; z-index: 10;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 20px 60px;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center; margin-bottom: 56px;
+  animation: fadeUp 0.7s ease both;
+}
+.logo-wrap {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin-bottom: 20px;
+}
+.logo-img {
+  height: 52px; width: auto; object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(6,182,212,0.3));
+}
+.logo-divider {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, transparent, rgba(148,163,184,0.4), transparent);
+}
+.site-label {
+  text-align: left;
+}
+.site-label-main {
+  font-size: 14px; font-weight: 600; color: var(--white);
+  letter-spacing: 0.05em;
+}
+.site-label-sub {
+  font-size: 10px; font-weight: 400; color: var(--cyan);
+  letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px;
+}
+
+.page-title {
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+.page-title span {
+  background: linear-gradient(90deg, var(--cyan), var(--blue2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.page-subtitle {
+  font-size: 13px;
+  color: var(--slate);
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+
+/* ── CARD GRID ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  width: 100%;
+  max-width: 860px;
+}
+
+/* ── PORTAL CARD ── */
+.portal-card {
+  position: relative;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 32px 28px 28px;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  animation: fadeUp 0.7s ease both;
+}
+.portal-card:nth-child(1) { animation-delay: 0.15s; }
+.portal-card:nth-child(2) { animation-delay: 0.28s; }
+
+.portal-card::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.portal-card.pm::before    { background: linear-gradient(135deg, rgba(16,185,129,0.08), transparent 60%); }
+.portal-card.obs::before   { background: linear-gradient(135deg, rgba(26,86,219,0.10), transparent 60%); }
+
+.portal-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255,255,255,0.18);
+}
+.portal-card.pm:hover  { box-shadow: 0 20px 60px rgba(16,185,129,0.18); }
+.portal-card.obs:hover { box-shadow: 0 20px 60px rgba(26,86,219,0.22); }
+.portal-card:hover::before { opacity: 1; }
+
+/* accent top bar */
+.portal-card .accent-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 16px 16px 0 0;
+}
+.portal-card.pm  .accent-bar { background: linear-gradient(90deg, var(--green), #34d399); }
+.portal-card.obs .accent-bar { background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+
+.card-icon-wrap {
+  width: 52px; height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px; flex-shrink: 0;
+}
+.pm  .card-icon-wrap { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); }
+.obs .card-icon-wrap { background: rgba(26,86,219,0.12);  border: 1px solid rgba(26,86,219,0.28); }
+
+.card-icon-wrap svg {
+  width: 26px; height: 26px;
+}
+.pm  .card-icon-wrap svg { color: #34d399; }
+.obs .card-icon-wrap svg { color: #60a5fa; }
+
+.card-badge {
+  position: absolute; top: 18px; right: 18px;
+  font-size: 9px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+}
+.pm  .card-badge { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+.obs .card-badge { background: rgba(26,86,219,0.15);  color: #93c5fd; border: 1px solid rgba(26,86,219,0.35); }
+
+.card-title {
+  font-size: 18px; font-weight: 700;
+  color: var(--white); margin-bottom: 8px; line-height: 1.3;
+}
+.card-desc {
+  font-size: 12.5px; color: var(--slate); line-height: 1.65;
+  flex: 1; margin-bottom: 24px;
+}
+
+.card-features {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px;
+}
+.feature-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; color: rgba(148,163,184,0.85);
+}
+.feature-dot {
+  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+}
+.pm  .feature-dot { background: #34d399; }
+.obs .feature-dot { background: #60a5fa; }
+
+.card-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-radius: 9px;
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: all 0.2s ease;
+}
+.pm  .card-cta { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+.obs .card-cta { background: rgba(26,86,219,0.12);  color: #93c5fd; border: 1px solid rgba(26,86,219,0.28); }
+.portal-card:hover .card-cta { filter: brightness(1.15); }
+
+.cta-arrow {
+  width: 18px; height: 18px; transition: transform 0.2s ease;
+}
+.portal-card:hover .cta-arrow { transform: translateX(4px); }
+
+/* ── FOOTER ── */
+.footer {
+  margin-top: 52px; text-align: center;
+  animation: fadeUp 0.7s 0.45s ease both;
+}
+.footer-line {
+  font-size: 10.5px; color: rgba(100,116,139,0.6);
+  letter-spacing: 0.07em; text-transform: uppercase;
+}
+.footer-line + .footer-line { margin-top: 4px; }
+
+/* ── STATUS DOTS ── */
+.status-row {
+  display: flex; align-items: center; justify-content: center; gap: 20px;
+  margin-top: 28px; margin-bottom: 0;
+  animation: fadeUp 0.7s 0.38s ease both;
+}
+.status-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px; color: var(--slate);
+}
+.status-dot-live {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 2.2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .card-grid { grid-template-columns: 1fr; max-width: 400px; }
+  .portal-card { padding: 26px 22px 22px; }
+  .page-title { font-size: 20px; }
+  .logo-img { height: 42px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+<div class="bg-glow bg-glow-3"></div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-wrap">
+      <img class="logo-img" src="masdar_logo.png" alt="MASDAR STS"
+           onerror="this.style.display='none'">
+      <div class="logo-divider"></div>
+      <div class="site-label">
+        <div class="site-label-main">MASDAR STS</div>
+        <div class="site-label-sub">DEWA VI · 1800MW Solar PV</div>
+      </div>
+    </div>
+    <h1 class="page-title">O&amp;M <span>Operations Portal</span></h1>
+    <p class="page-subtitle">Select a portal to begin — MBRSP-DEWA VI Power Plant</p>
+  </div>
+
+  <!-- CARDS -->
+  <div class="card-grid">
+
+    <!-- PM CHECKLIST -->
+    <a class="portal-card pm" href="pm_checklist_portal.html">
+      <div class="accent-bar"></div>
+      <span class="card-badge">Maintenance</span>
+
+      <div class="card-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="2"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+      </div>
+
+      <h2 class="card-title">PM Checklist<br>Portal</h2>
+      <p class="card-desc">Preventive maintenance checklists for solar PV equipment. Log tasks, track completion, and export structured reports.</p>
+
+      <div class="card-features">
+        <div class="feature-item"><div class="feature-dot"></div>Equipment task checklists</div>
+        <div class="feature-item"><div class="feature-dot"></div>Phase / MVPS / Block tracking</div>
+        <div class="feature-item"><div class="feature-dot"></div>PDF &amp; Excel export</div>
+      </div>
+
+      <div class="card-cta">
+        Open PM Checklist Portal
+        <svg class="cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+
+    <!-- OBSERVATION REPORT -->
+    <a class="portal-card obs" href="observation_report_portal_v3.html">
+      <div class="accent-bar"></div>
+      <span class="card-badge">Observations</span>
+
+      <div class="card-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+          <path d="M11 8v6M8 11h6"/>
+        </svg>
+      </div>
+
+      <h2 class="card-title">O&amp;M Observations<br>Report Portal</h2>
+      <p class="card-desc">Log site observations, attach photo evidence, track material requirements and follow up on open issues through to closure.</p>
+
+      <div class="card-features">
+        <div class="feature-item"><div class="feature-dot"></div>Multi-row observation log</div>
+        <div class="feature-item"><div class="feature-dot"></div>Photo upload per observation</div>
+        <div class="feature-item"><div class="feature-dot"></div>PDF with images &amp; Excel export</div>
+      </div>
+
+      <div class="card-cta">
+        Open Observations Portal
+        <svg class="cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- STATUS ROW -->
+  <div class="status-row">
+    <div class="status-item">
+      <div class="status-dot-live"></div>
+      Both portals active
+    </div>
+    <div class="status-item" style="color:rgba(100,116,139,0.4)">·</div>
+    <div class="status-item">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      &nbsp;Confidential — Internal Use Only
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p class="footer-line">MASDAR STS · A Subsidiary of Masdar</p>
+    <p class="footer-line">MBRSP-DEWA VI 1800MW Solar PV Power Plant · Operations &amp; Maintenance</p>
+  </div>
+
+</div>
+
+</body>
+</html>
