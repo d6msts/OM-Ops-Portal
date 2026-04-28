@@ -561,6 +561,20 @@ body{
   </div>
 </div>
 
+<!-- ── OVERALL REMARKS ── -->
+<div class="card" id="overallRemarksCard">
+  <div class="card-header">
+    <div class="dot" style="background:var(--gold);box-shadow:0 0 6px var(--gold)"></div>
+    Overall Remarks / Observations
+  </div>
+  <div class="card-body">
+    <textarea id="overallRemarks" class="remark-input"
+      placeholder="Enter overall remarks, observations, or findings for this PM activity…"
+      style="width:100%;min-height:80px;max-height:300px;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--lighter)"
+      oninput="autoResize(this);saveDraft()"></textarea>
+  </div>
+</div>
+
 <!-- ── SIGNATURES ── -->
 <div class="card">
   <div class="card-header">
@@ -808,7 +822,8 @@ UPS_BATTERIES:[
 {sr:7,check:"Check cable glands sealing",req:"Should be sealed",freq:"HY"},
 {sr:8,check:"Battery testing with tester",req:"Testing required",freq:"HY"},
 {sr:9,check:"Check UPS foundation",req:"No damage",freq:"HY"},
-{sr:10,check:"Check exhaust fan",req:"Working",freq:"HY"}
+{sr:10,check:"Check exhaust fan",req:"Working",freq:"HY"},
+{sr:11,check:"Total Battery Volatage",req:"in Volts",freq:"HY"}
 ],
 NCU:[
 {sr:1,check:"Check NCU enclosure damage",req:"No damage",freq:"A"},
@@ -913,6 +928,33 @@ window.onload = function(){
   updateMVPS();
   // set today as default date
   document.getElementById("plannedDate").valueAsDate = new Date();
+
+  // Restore draft if available
+  const draft = restoreDraft();
+  if(draft){
+    // Restore phase + mvps first (order matters)
+    if(draft["phase"]){ document.getElementById("phase").value = draft["phase"]; updateMVPS(); }
+    if(draft["mvps"]){ document.getElementById("mvps").value = draft["mvps"]; }
+    // Restore equipment selection and reload checklist, then restore row data
+    if(draft["equipmentSelect"]){
+      document.getElementById("equipmentSelect").value = draft["equipmentSelect"];
+      loadChecklist();
+      // Restore row data after checklist is rendered
+      setTimeout(function(){ restoreDraftChecklist(draft); }, 80);
+    }
+    // Show restore notice
+    showStatus("Draft restored from your last session.", "info");
+    setTimeout(function(){ document.getElementById("statusBar").className="status-bar"; }, 4000);
+  }
+
+  // Global input listener — save draft on any user interaction with work-order fields
+  ["mo","ptw","equipSr","equipId","freq","plannedDate","startTime","finishTime",
+   "phase","mvps","maintIncharge","position","reviewer","tech","submitBy","reviewBy"
+  ].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("change", saveDraft);
+    if(el) el.addEventListener("input",  saveDraft);
+  });
 };
 
 // ================================================================
@@ -938,6 +980,20 @@ function updateMVPS(){
 function loadChecklist(){
   const eq = document.getElementById("equipmentSelect").value;
   document.getElementById("checklistTitle").textContent = eq + " — Preventive Maintenance Checklist";
+  // Clear checklist row draft data when equipment changes (but keep header fields)
+  try{
+    const raw = sessionStorage.getItem("pmDraft");
+    if(raw){
+      const d = JSON.parse(raw);
+      // If equipment changed, wipe row data so old rows don't restore
+      if(d["equipmentSelect"] && d["equipmentSelect"] !== eq){
+        delete d["__ta"]; delete d["__sel"]; delete d["__dcbSr"]; delete d["__batt"];
+        delete d["ertRemarks"];
+      }
+      d["equipmentSelect"] = eq;
+      sessionStorage.setItem("pmDraft", JSON.stringify(d));
+    }
+  }catch(e){}
 
   // map type
   let type = eq;
@@ -978,19 +1034,39 @@ if(type.includes("PV FIELD LA")) type="PV_FIELD_LA";
       <th style="min-width:80px;text-align:center">DCB-05<br><input class="dcb-serial-input" id="dcbSr5" placeholder="Sl.no" style="width:70px;font-size:11px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;margin-top:3px"></th>
       <th style="min-width:180px">Remarks</th>
     `;
+    // Build dropdown options based on requirement text
+    function dcbOpts(req){
+      const r = req.toLowerCase();
+      let opts;
+      if(r.includes("no damage") || r.includes("no damaged")) opts=["","OK - No Damage","Damage Found","NA"];
+      else if(r.includes("clean"))   opts=["","Cleaned","Dusty / Not Cleaned","NA"];
+      else if(r.includes("noise"))   opts=["","No Abnormal Noise","Abnormal Noise Found","NA"];
+      else if(r.includes("loose"))   opts=["","No Loose Connection","Loose Connection Found","NA"];
+      else if(r.includes("plug"))    opts=["","Plugged","Not Plugged","NA"];
+      else if(r.includes("ground"))  opts=["","Grounded","Not Grounded / Open","NA"];
+      else if(r.includes("retorque")||r.includes("torque")) opts=["","Done","Pending","NA"];
+      else if(r.includes("thermograph")) opts=["","Done","Not Done","NA"];
+      else if(r.includes("seal"))    opts=["","Sealed","Not Sealed","NA"];
+      else if(r.includes("ir test")) opts=["","Done - Pass","Done - Fail","Not Done","NA"];
+      else if(r.includes("work properly")||r.includes("working fine")||r.includes("healthy")) opts=["","Working Fine","Fault Found","NA"];
+      else                           opts=["","OK","Not OK","NA"];
+      return opts.map(o=>`<option value="${o}">${o||"-- Select --"}</option>`).join("");
+    }
+    const dcbSelStyle = `width:100%;min-width:90px;height:32px;border:1.5px solid #cbd5e1;border-radius:5px;font-size:11px;background:#fff;color:#0a1628;padding:0 4px;cursor:pointer;appearance:auto`;
     data.forEach(item => {
+      const opts = dcbOpts(item.req);
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="sr-cell">${item.sr}</td>
         <td class="check-cell">${item.check}</td>
         <td class="req-cell">${item.req}</td>
         <td class="freq-cell"><span class="freq-badge ${item.freq}">${item.freq}</span></td>
-        <td style="text-align:center;min-width:80px"><textarea class="remark-input dcb-cell" placeholder="" oninput="autoResize(this)" style="min-height:30px;width:72px;font-size:11px;resize:vertical"></textarea></td>
-        <td style="text-align:center;min-width:80px"><textarea class="remark-input dcb-cell" placeholder="" oninput="autoResize(this)" style="min-height:30px;width:72px;font-size:11px;resize:vertical"></textarea></td>
-        <td style="text-align:center;min-width:80px"><textarea class="remark-input dcb-cell" placeholder="" oninput="autoResize(this)" style="min-height:30px;width:72px;font-size:11px;resize:vertical"></textarea></td>
-        <td style="text-align:center;min-width:80px"><textarea class="remark-input dcb-cell" placeholder="" oninput="autoResize(this)" style="min-height:30px;width:72px;font-size:11px;resize:vertical"></textarea></td>
-        <td style="text-align:center;min-width:80px"><textarea class="remark-input dcb-cell" placeholder="" oninput="autoResize(this)" style="min-height:30px;width:72px;font-size:11px;resize:vertical"></textarea></td>
-        <td class="remark-cell"><textarea class="remark-input" placeholder="Overall remarks…" oninput="autoResize(this)"></textarea></td>
+        <td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="${item.sr}" data-dcb="1" style="${dcbSelStyle}" onchange="saveDraft()">${opts}</select></td>
+        <td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="${item.sr}" data-dcb="2" style="${dcbSelStyle}" onchange="saveDraft()">${opts}</select></td>
+        <td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="${item.sr}" data-dcb="3" style="${dcbSelStyle}" onchange="saveDraft()">${opts}</select></td>
+        <td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="${item.sr}" data-dcb="4" style="${dcbSelStyle}" onchange="saveDraft()">${opts}</select></td>
+        <td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="${item.sr}" data-dcb="5" style="${dcbSelStyle}" onchange="saveDraft()">${opts}</select></td>
+        <td class="remark-cell"><textarea class="remark-input" placeholder="Overall remarks…" oninput="autoResize(this);saveDraft()"></textarea></td>
       `;
       tbody.appendChild(tr);
     });
@@ -1011,7 +1087,7 @@ if(type.includes("PV FIELD LA")) type="PV_FIELD_LA";
         <td class="check-cell">${item.check}</td>
         <td class="req-cell">${item.req}</td>
         <td class="freq-cell"><span class="freq-badge ${item.freq}">${item.freq}</span></td>
-        <td class="remark-cell"><textarea class="remark-input" placeholder="Enter findings / remarks…" oninput="autoResize(this)"></textarea></td>
+        <td class="remark-cell"><textarea class="remark-input" placeholder="Enter findings / remarks…" oninput="autoResize(this);saveDraft()"></textarea></td>
       `;
       tbody.appendChild(tr);
     });
@@ -1061,10 +1137,6 @@ if(type.includes("PV FIELD LA")) type="PV_FIELD_LA";
             </tr>
           </tbody>
         </table>
-        </div>
-        <div style="margin-top:14px">
-          <label style="font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--slate);display:block;margin-bottom:6px">Remarks</label>
-          <textarea id="ertRemarks" class="remark-input" placeholder="e.g. LA ALL Earth pits name plate not available; All Earth pit chamber cap earth pit handle screw &amp; washer; LA Earth pit-02 earth pit chamber damage…" oninput="autoResize(this)" style="width:100%;min-height:54px"></textarea>
         </div>
       </div>
       </div>
@@ -1140,8 +1212,10 @@ function collectDCBData(){
     if(tds.length < 9) return;
     const dcbVals = [];
     for(var c=4;c<=8;c++){
-      var ta = tds[c].querySelector("textarea");
-      dcbVals.push(safeStr(ta?ta.value:""));
+      // DCB cells are now <select> dropdowns (updated from textarea)
+      var sel = tds[c].querySelector("select");
+      var ta  = tds[c].querySelector("textarea");
+      dcbVals.push(safeStr(sel ? sel.value : (ta ? ta.value : "")));
     }
     var remarkTa = tds[9] ? tds[9].querySelector("textarea") : null;
     rows.push({
@@ -1218,7 +1292,9 @@ function collectERTData(){
 
 function generateExcel(){
   const rows = collectFormData();
-  if(rows.length === 0){ showStatus("Please load a checklist first.","error"); return; }
+  const dcbCheck = collectDCBData();
+  const hasRows = rows.length > 0 || (dcbCheck && dcbCheck.rows && dcbCheck.rows.length > 0);
+  if(!hasRows){ showStatus("Please load a checklist first.","error"); return; }
   showOverlay("Building export…");
 
   // Gather form values
@@ -1277,6 +1353,13 @@ function generateExcel(){
     D.push(["Value (ohm)"].concat(ertData.vals));
     if(ertData.remarks) D.push(["Remarks",ertData.remarks,"","","",""]);
   }
+  // Overall remarks
+  const overallRem = safeStr((document.getElementById("overallRemarks")||{}).value||"");
+  if(overallRem){
+    D.push(["","","","","",""]);
+    D.push(["OVERALL REMARKS","","","","",""]);
+    D.push([overallRem,"","","","",""]);
+  }
   D.push(["","","","","",""]);
   D.push(["AUTHORISATION & SIGNATURES","","","","",""]);
   D.push(["Performed By (Technician)",tech,"","","",""]);
@@ -1286,7 +1369,7 @@ function generateExcel(){
   D.push(["Report Generated:",new Date().toLocaleString(),"","","",""]);
 
   // ── Also build "Data Import" rows for main Excel file ──
-  const importHeaders = ["Area Name","RIO / No","Planned Date","Actual Date"];
+  const importHeaders = ["Area Name","Equip / No","Planned Date","Actual Date"];
   rows.forEach(function(r){ importHeaders.push("Item "+r.sr+": "+safeStr(r.check).substring(0,28)); });
   importHeaders.push("Checked By","Reviewed By");
   const importRow = [eq,equipId,date,""];
@@ -1296,30 +1379,72 @@ function generateExcel(){
   // ── Handle DCB special export ──
   const dcbExportData = collectDCBData();
   if(dcbExportData && dcbExportData.rows.length > 0){
-    // Build DCB sheet
+    // Build DCB checkpoint header/rows
     const dcbHeaders = ["Sr No","Check Point","Requirement","Frequency"].concat(dcbExportData.serials).concat(["Remarks"]);
-    const dcbRows2 = dcbExportData.rows.map(function(r){ return [safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq)].concat(r.dcb).concat([safeStr(r.remark)]); });
-    const dcbSheet = [dcbHeaders].concat(dcbRows2);
-    const dcbWS = XLSX.utils.aoa_to_sheet(dcbSheet);
-    dcbWS["!cols"] = [{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
-    // Merge with main D array top section
-    var dcbFullData = [];
-    D.forEach(function(row){ dcbFullData.push(row); });
-    // Build a separate wb with DCB sheet
+    const dcbDataRows = dcbExportData.rows.map(function(r){
+      return [safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq)].concat(r.dcb.map(safeStr)).concat([safeStr(r.remark)]);
+    });
+    // Build Data Import rows using DCB columns
+    const dcbImpHeaders = ["Area Name","Equipment ID","Planned Date","Actual Date"];
+    dcbExportData.rows.forEach(function(r){ dcbImpHeaders.push("Item "+safeStr(r.sr)+": "+safeStr(r.check).substring(0,28)); });
+    dcbImpHeaders.push("Checked By","Reviewed By","Overall Remarks");
+    const dcbImpRow = [eq, equipId||"-", date||"-", ""];
+    dcbExportData.rows.forEach(function(r){ dcbImpRow.push(r.dcb.map(safeStr).filter(Boolean).join(" | ")||""); });
+    dcbImpRow.push(maintIC, rev, overallRem);
+    // Build Sheet1 (PM Checklist) — pad ALL rows to exactly 10 cols
+    function p10(a){ var r=a.slice(); while(r.length<10) r.push(""); return r; }
+    const D_dcb = [];
+    D_dcb.push(p10(["MBRSP-DEWA VI - 1800MW Solar PV Power Plant"]));
+    D_dcb.push(p10([eq+" - Preventive Maintenance Checklist"]));
+    D_dcb.push(p10([]));
+    D_dcb.push(p10(["Plant","DEWA-VI","MO No.",mo||"-","PTW No.",ptw||"-"]));
+    D_dcb.push(p10(["Phase",phase,"MVPS No.",mvps,"Equipment",eq]));
+    D_dcb.push(p10(["Equip. Sr No.",equipSr||"-","Equipment ID",equipId||"-","Frequency",freq||"-"]));
+    D_dcb.push(p10(["Planned Date",date||"-","Start Time",startTm||"-","Finish Time",finTm||"-"]));
+    D_dcb.push(p10(["Maint. In-Charge",maintIC,"Position",pos,"Reviewed By",rev]));
+    D_dcb.push(p10([]));
+    D_dcb.push(p10(dcbHeaders));
+    dcbDataRows.forEach(function(r){ D_dcb.push(p10(r)); });
+    if(overallRem){
+      D_dcb.push(p10([]));
+      D_dcb.push(p10(["OVERALL REMARKS"]));
+      D_dcb.push(p10(["",overallRem]));
+    }
+    D_dcb.push(p10([]));
+    D_dcb.push(p10(["AUTHORISATION & SIGNATURES"]));
+    D_dcb.push(p10(["Performed By (Technician)",tech]));
+    D_dcb.push(p10(["Submitted By",submit]));
+    D_dcb.push(p10(["Reviewed By",revBy]));
+    D_dcb.push(p10([]));
+    D_dcb.push(p10(["Report Generated:",new Date().toLocaleString()]));
     if(typeof XLSX !== "undefined"){
       try{
-        const wb2 = XLSX.utils.book_new();
-        const ws1b = XLSX.utils.aoa_to_sheet(D);
-        ws1b["!cols"] = [{wch:18},{wch:50},{wch:36},{wch:12},{wch:40},{wch:10}];
-        ws1b["!merges"] = [{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+        var wb2 = XLSX.utils.book_new();
+        // Sheet 1: PM Checklist with DCB checkpoint data
+        var ws1b = XLSX.utils.aoa_to_sheet(D_dcb);
+        ws1b["!cols"] = [{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
+        ws1b["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:D_dcb.length-1,c:9}});
         XLSX.utils.book_append_sheet(wb2,"PM Checklist",ws1b);
-        XLSX.utils.book_append_sheet(wb2,"DCB Data",dcbWS);
-        XLSX.utils.book_append_sheet(wb2,"Data Import",XLSX.utils.aoa_to_sheet([importHeaders,importRow]));
-        const fn2 = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+fileDateStr()+".xlsx";
+        // Sheet 2: DCB Data (standalone checkpoint table only)
+        var dcbOnlyRows = [p10(dcbHeaders)].concat(dcbDataRows.map(p10));
+        var wsDCB2 = XLSX.utils.aoa_to_sheet(dcbOnlyRows);
+        wsDCB2["!cols"] = [{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
+        wsDCB2["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:dcbOnlyRows.length-1,c:9}});
+        XLSX.utils.book_append_sheet(wb2,"DCB Data",wsDCB2);
+        // Sheet 3: Data Import
+        var wsImp2 = XLSX.utils.aoa_to_sheet([dcbImpHeaders,dcbImpRow]);
+        wsImp2["!cols"] = dcbImpHeaders.map(function(_,i){ return {wch:i<4?18:24}; });
+        XLSX.utils.book_append_sheet(wb2,"Data Import",wsImp2);
+        var fn2 = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+fileDateStr()+".xlsx";
         XLSX.writeFile(wb2,fn2);
-        showStatus("Excel exported (DCB): "+fn2+" (3 sheets)", "success");
+        showStatus("Excel exported (DCB): "+fn2+" — 3 sheets: PM Checklist | DCB Data | Data Import", "success");
         hideOverlay(); return;
-      }catch(e2){ console.warn("DCB XLSX failed",e2); }
+      }catch(e2){
+        var eMsg = (e2 && e2.message) ? e2.message : String(e2);
+        console.error("DCB XLSX failed:", e2);
+        showStatus("DCB Excel export failed: "+eMsg,"error");
+        hideOverlay(); return;
+      }
     }
   }
 
@@ -1409,6 +1534,7 @@ async function generatePDF(){
     const eq      = document.getElementById("equipmentSelect").value;
     const equipId = document.getElementById("equipId").value;
     const safeEq  = eq.replace(/[^a-zA-Z0-9_-]/g,"_");
+const overallRemarks = document.getElementById("overallRemarks").value || "-";
     const filename = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+fileDateStr()+".pdf";
     doc.save(filename);
     showStatus("PDF saved (1 page): "+filename, "success");
@@ -1701,9 +1827,10 @@ async function generateZip(){
     try {
       if(typeof XLSX !== "undefined"){
         const xlsxBlob = buildXLSXBlob();
-        if(xlsxBlob) zip.file(baseName+".xlsx", xlsxBlob);
-      }
-    } catch(e){ console.warn("Excel in zip failed:", e); }
+        if(xlsxBlob){ zip.file(baseName+".xlsx", xlsxBlob); }
+        else { console.warn("buildXLSXBlob returned null/undefined"); }
+      } else { console.warn("XLSX library not loaded"); }
+    } catch(e){ console.error("Excel in zip failed:", e.message, e.stack); showStatus("⚠ Excel in ZIP failed: "+e.message+" — check console","error"); }
 
     // ── 3. Generate CSV blob ──
     try {
@@ -1718,7 +1845,7 @@ async function generateZip(){
     a.href = url; a.download = baseName+".zip";
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-    showStatus("ZIP downloaded: "+baseName+".zip (PDF + Excel + CSV)", "success");
+    showStatus("ZIP downloaded: "+baseName+".zip (PDF + Excel [PM Checklist + DCB Data + Data Import] + CSV)", "success");
   } catch(err){
     showStatus("ZIP generation failed: "+err.message, "error");
     console.error(err);
@@ -1749,6 +1876,7 @@ async function buildPDFDoc(){
   const techSig   = document.getElementById("techPreview").dataset.b64||null;
   const submitSig = document.getElementById("submitPreview").dataset.b64||null;
   const reviewSig = document.getElementById("reviewPreview").dataset.b64||null;
+const overallRemarks = document.getElementById("overallRemarks").value || "-";
 
   // Use landscape for DCB (10 columns), portrait for others
   const useDCB = dcbD && dcbD.rows.length > 0;
@@ -1899,6 +2027,25 @@ async function buildPDFDoc(){
     }
   }
 
+  // Overall Remarks (before signatures)
+  const overallRemVal = safeStr((document.getElementById("overallRemarks")||{}).value||"");
+  if(overallRemVal){
+    // Always show overall remarks if there's any space before signatures
+    const remThreshold = PH - footerH - sigH - 6;
+    if(cy < remThreshold){
+      doc.setFillColor(248,250,255); doc.setDrawColor(200,210,230); doc.setLineWidth(0.25);
+      const remFs = useDCB ? 6 : 7;
+      const remLines = doc.splitTextToSize(overallRemVal, usableW - 6);
+      const remBoxH = Math.min(6 + remLines.length * (remFs * 0.38 + 0.5) + 3, remThreshold - cy - 2);
+      doc.roundedRect(ML, cy, usableW, remBoxH, 1, 1, "FD");
+      doc.setFont("helvetica","bold"); doc.setFontSize(remFs); doc.setTextColor(10,22,40);
+      doc.text("Overall Remarks / Observations:", ML+2.5, cy+4);
+      doc.setFont("helvetica","normal"); doc.setFontSize(remFs); doc.setTextColor(30,40,70);
+      doc.text(remLines, ML+2.5, cy+4+remFs*0.42+1.5);
+      cy += remBoxH + 2;
+    }
+  }
+
   // Signatures
   const sigY=PH-footerH-sigH-1, sigBoxW=(usableW-8)/3;
   const sigLabels2=["Performed By (Technician)","Submitted By","Reviewed By"];
@@ -1940,23 +2087,30 @@ function buildXLSXBlob(){
   const tech=safeStr(document.getElementById("tech").value);
   const submit=safeStr(document.getElementById("submitBy").value);
   const revBy=safeStr(document.getElementById("reviewBy").value);
+  const isDCBBlob2 = dcbD && dcbD.rows && dcbD.rows.length > 0;
+  const numCols = isDCBBlob2 ? 10 : 6;
+  const pad = function(arr){ while(arr.length < numCols) arr.push(""); return arr; };
   const D2=[
-    [safeStr("MBRSP-DEWA VI - 1800MW Solar PV Power Plant"),"","","","",""],
-    [safeStr(eq+" - Preventive Maintenance Checklist"),"","","","",""],
-    ["","","","","",""],
-    ["Plant","DEWA-VI","MO No.",mo,"PTW No.",ptw],
-    ["Phase",phase,"MVPS",mvps,"Equipment",eq],
-    ["Equip Sr",safeStr(document.getElementById("equipSr").value)||"-","Equip ID",equipId||"-","Frequency",freq||"-"],
-    ["Planned Date",date||"-","Start",safeStr(document.getElementById("startTime").value)||"-","Finish",safeStr(document.getElementById("finishTime").value)||"-"],
-    ["In-Charge",maintIC,"Position",pos,"Reviewed By",rev],
-    ["","","","","",""]
+    pad(["MBRSP-DEWA VI - 1800MW Solar PV Power Plant"]),
+    pad([eq+" - Preventive Maintenance Checklist"]),
+    pad([""]),
+    pad(["Plant","DEWA-VI","MO No.",mo,"PTW No.",ptw]),
+    pad(["Phase",phase,"MVPS",mvps,"Equipment",eq]),
+    pad(["Equip Sr",safeStr(document.getElementById("equipSr").value)||"-","Equip ID",equipId||"-","Frequency",freq||"-"]),
+    pad(["Planned Date",date||"-","Start",safeStr(document.getElementById("startTime").value)||"-","Finish",safeStr(document.getElementById("finishTime").value)||"-"]),
+    pad(["In-Charge",maintIC,"Position",pos,"Reviewed By",rev]),
+    pad([""])
   ];
-  if(dcbD&&dcbD.rows.length>0){
+  if(isDCBBlob2){
     D2.push(["Sr No","Check Point","Requirement","Freq"].concat(dcbD.serials).concat(["Remarks"]));
-    dcbD.rows.forEach(function(r){D2.push([r.sr,r.check,r.req,r.freq].concat(r.dcb).concat([r.remark]));});
+    dcbD.rows.forEach(function(r){D2.push([safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq)].concat(r.dcb.map(safeStr)).concat([safeStr(r.remark)]));});
   } else {
     D2.push(["Sr No","Check Point","Requirement","Frequency","Remarks","Status"]);
-    rows.forEach(function(r){D2.push([r.sr,r.check,r.req,r.freq,r.remark,""]);}); 
+    rows.forEach(function(r){
+      var rem=safeStr(r.remark); var rl=rem.toLowerCase();
+      var st=rem?(rl.includes("ok")||rl.includes("good")||rl.includes("clean")?"OK":rl.includes("not")||rl.includes("fail")||rl.includes("damage")?"NOT OK":"Done"):"";
+      D2.push([safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq),rem,st]);
+    });
   }
   const battData3=collectBatteryData();
   const isEarthPits3=eq.toUpperCase().includes("EARTH");
@@ -1970,13 +2124,48 @@ function buildXLSXBlob(){
     D2.push(["Value (ohm)"].concat(ertData3.vals));
     if(ertData3.remarks) D2.push(["Remarks",ertData3.remarks,"","","",""]);
   }
-  D2.push([""],["SIGNATURES","","","","",""],["Performed By",tech,"","","",""],["Submitted By",submit,"","","",""],["Reviewed By",revBy,"","","",""],[""],["Generated:",new Date().toLocaleString(),"","","",""]);
-  const wb3=XLSX.utils.book_new();
-  const ws3=XLSX.utils.aoa_to_sheet(D2);
-  ws3["!cols"]=[{wch:18},{wch:50},{wch:36},{wch:12},{wch:40},{wch:10}];
-  ws3["!merges"]=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+  // Overall Remarks
+  const overallRemBlob=safeStr((document.getElementById("overallRemarks")||{}).value||"");
+  if(overallRemBlob){ D2.push(pad([""]),pad(["OVERALL REMARKS"]),pad(["",overallRemBlob])); }
+  D2.push(pad([""]),pad(["AUTHORISATION & SIGNATURES"]),pad(["Performed By (Technician)",tech]),pad(["Submitted By",submit]),pad(["Reviewed By",revBy]),pad([""]),pad(["Generated:",new Date().toLocaleString()]));
+  var wb3=XLSX.utils.book_new();
+  // Sheet 1: PM Checklist — explicitly set !ref to avoid SheetJS range errors
+  var ws3=XLSX.utils.aoa_to_sheet(D2);
+  var ncols3 = isDCBBlob2 ? 10 : 6;
+  ws3["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:D2.length-1,c:ncols3-1}});
+  if(isDCBBlob2){
+    ws3["!cols"]=[{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
+  } else {
+    ws3["!cols"]=[{wch:18},{wch:50},{wch:36},{wch:12},{wch:40},{wch:10}];
+  }
   XLSX.utils.book_append_sheet(wb3,"PM Checklist",ws3);
-  const ab=XLSX.write(wb3,{bookType:"xlsx",type:"array"});
+  // Sheet 2: DCB Data (standalone checkpoint table, only for DCB)
+  if(isDCBBlob2){
+    var dcbHdrs=["Sr No","Check Point","Requirement","Frequency"].concat(dcbD.serials).concat(["Remarks"]);
+    var dcbRws=dcbD.rows.map(function(r){
+      var row=[safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq)].concat((r.dcb||[]).map(safeStr)).concat([safeStr(r.remark)]);
+      while(row.length<10) row.push(""); return row;
+    });
+    var allDCBRows=[dcbHdrs].concat(dcbRws);
+    var wsDCB=XLSX.utils.aoa_to_sheet(allDCBRows);
+    wsDCB["!ref"]=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:allDCBRows.length-1,c:9}});
+    wsDCB["!cols"]=[{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
+    XLSX.utils.book_append_sheet(wb3,"DCB Data",wsDCB);
+  }
+  // Sheet 3: Data Import (flat row for HQ main Excel)
+  var srcRowsBlob = isDCBBlob2 ? dcbD.rows : rows;
+  var impHdrs=["Area Name","Equipment ID","Planned Date","Actual Date"];
+  srcRowsBlob.forEach(function(r){ impHdrs.push("Item "+safeStr(r.sr)+": "+safeStr(r.check).substring(0,28)); });
+  impHdrs.push("Checked By","Reviewed By","Overall Remarks");
+  var impRow=[eq,equipId||"-",date||"-",""];
+  srcRowsBlob.forEach(function(r){
+    impRow.push(isDCBBlob2 ? ((r.dcb||[]).map(safeStr).filter(function(v){return v;}).join(" | ")||"") : safeStr(r.remark));
+  });
+  impRow.push(maintIC,rev,overallRemBlob);
+  var wsImp=XLSX.utils.aoa_to_sheet([impHdrs,impRow]);
+  wsImp["!cols"]=impHdrs.map(function(_,i){return {wch:i<4?18:24};});
+  XLSX.utils.book_append_sheet(wb3,"Data Import",wsImp);
+  var ab=XLSX.write(wb3,{bookType:"xlsx",type:"array"});
   return new Uint8Array(ab);
 }
 
@@ -1993,6 +2182,101 @@ function buildCSVBlob(){
     rows2.forEach(function(r){lines.push([r.sr,r.check,r.req,r.freq,r.remark].map(csvEsc).join(","));});
   }
   return new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+}
+
+// ================================================================
+// DRAFT SAVE / RESTORE  — sessionStorage (survives refresh, cleared on tab close)
+// ================================================================
+function saveDraft(){
+  try{
+    const draft = {};
+    // Work order fields
+    ["mo","ptw","equipSr","equipId","freq","plannedDate","startTime","finishTime",
+     "phase","mvps","equipmentSelect","maintIncharge","position","reviewer",
+     "tech","submitBy","reviewBy"].forEach(function(id){
+      const el = document.getElementById(id);
+      if(el) draft[id] = el.value;
+    });
+    // Overall remarks
+    const or = document.getElementById("overallRemarks");
+    if(or) draft["overallRemarks"] = or.value;
+    // ERT remarks
+    const er = document.getElementById("ertRemarks");
+    if(er) draft["ertRemarks"] = er.value;
+    // All checklist textareas
+    const tas = document.querySelectorAll("#checklistBody textarea");
+    const taVals = [];
+    tas.forEach(function(ta){ taVals.push(ta.value); });
+    draft["__ta"] = taVals;
+    // All checklist selects (DCB dropdowns)
+    const sels = document.querySelectorAll("#checklistBody select");
+    const selVals = [];
+    sels.forEach(function(s){ selVals.push(s.value); });
+    draft["__sel"] = selVals;
+    // DCB serial number inputs in thead
+    const dcbInputs = document.querySelectorAll(".dcb-serial-input");
+    const dcbVals = [];
+    dcbInputs.forEach(function(i){ dcbVals.push(i.value); });
+    draft["__dcbSr"] = dcbVals;
+    // Battery / ERT inputs
+    const battInputs = document.querySelectorAll("input.battery-input, input.ert-input");
+    const battVals = [];
+    battInputs.forEach(function(i){ battVals.push(i.value); });
+    draft["__batt"] = battVals;
+    sessionStorage.setItem("pmDraft", JSON.stringify(draft));
+  }catch(e){ /* non-critical */ }
+}
+
+function restoreDraft(){
+  try{
+    const raw = sessionStorage.getItem("pmDraft");
+    if(!raw) return false;
+    const draft = JSON.parse(raw);
+    // Restore work order fields (skip equipmentSelect — handled by loadChecklist trigger)
+    ["mo","ptw","equipSr","equipId","freq","plannedDate","startTime","finishTime",
+     "phase","maintIncharge","position","reviewer","tech","submitBy","reviewBy"
+    ].forEach(function(id){
+      const el = document.getElementById(id);
+      if(el && draft[id] !== undefined) el.value = draft[id];
+    });
+    // Restore overall remarks immediately (it always exists)
+    const or2 = document.getElementById("overallRemarks");
+    if(or2 && draft["overallRemarks"]) { or2.value = draft["overallRemarks"]; autoResize(or2); }
+    return draft;
+  }catch(e){ return false; }
+}
+
+function restoreDraftChecklist(draft){
+  if(!draft) return;
+  try{
+    // Textareas
+    if(draft["__ta"]){
+      const tas = document.querySelectorAll("#checklistBody textarea");
+      draft["__ta"].forEach(function(v,i){ if(tas[i]){ tas[i].value=v; autoResize(tas[i]); }});
+    }
+    // Selects (DCB dropdowns)
+    if(draft["__sel"]){
+      const sels = document.querySelectorAll("#checklistBody select");
+      draft["__sel"].forEach(function(v,i){ if(sels[i]) sels[i].value=v; });
+    }
+    // DCB serial inputs
+    if(draft["__dcbSr"]){
+      const dcbInputs = document.querySelectorAll(".dcb-serial-input");
+      draft["__dcbSr"].forEach(function(v,i){ if(dcbInputs[i]) dcbInputs[i].value=v; });
+    }
+    // Battery / ERT inputs
+    if(draft["__batt"]){
+      const battInputs = document.querySelectorAll("input.battery-input, input.ert-input");
+      draft["__batt"].forEach(function(v,i){ if(battInputs[i]) battInputs[i].value=v; });
+    }
+    // ERT remarks
+    const er2 = document.getElementById("ertRemarks");
+    if(er2 && draft["ertRemarks"]){ er2.value = draft["ertRemarks"]; autoResize(er2); }
+  }catch(e){ /* non-critical */ }
+}
+
+function clearDraft(){
+  try{ sessionStorage.removeItem("pmDraft"); }catch(e){}
 }
 
 function showOverlay(msg){
