@@ -229,7 +229,7 @@ body{
 .sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .sig-card{
   border:1.5px solid var(--border);border-radius:10px;
-  padding:16px;background:var(--lighter);
+  padding:16px;background:var(--white);
   display:flex;flex-direction:column;gap:10px;
 }
 .sig-card h4{
@@ -1607,23 +1607,52 @@ const overallRemarks = document.getElementById("overallRemarks").value || "-";
     const minCH      = Math.max(usedByFont, (tableAreaH - headRowH) / rowCount);
     const infoFont   = Math.min(7, chosenFont + 0.5);
 
-    // ── HEADER (white bg) ──
+    // ── HEADER (white bg, outer border) ──
     doc.setFillColor(255,255,255);
     doc.rect(0,0,PW,headerH,"F");
     doc.setDrawColor(10,22,40);
     doc.setLineWidth(0.5);
-    doc.line(0,headerH,PW,headerH);
-    // Logo wider (32 wide × 14 tall) — prevents vertical stretching
+    doc.rect(0,0,PW,headerH,"S");           // full outer border around header
+    // Logo area
     doc.addImage(LOGO_B64,"PNG",ML,4,34,14,undefined,"FAST");
-    // Title
+    // Vertical divider: after logo box
+    const logoBoxW = ML + 34 + 6;           // ~48mm logo column
+    doc.setLineWidth(0.4);
+    doc.line(logoBoxW, 0, logoBoxW, headerH);
+    // Doc ref number — right side of header
+    const docRefMap = {
+      "DCB":"MBRSP-MSTS-DEWA-VI-E-CLS-036-Rev-000",
+      "NCU":"MBRSP-MSTS-DEWA-VI-E-CLS-037-Rev-000",
+      "RMU":"MBRSP-MSTS-DEWA-VI-E-CLS-038-Rev-000",
+      "INVERTER":"MBRSP-MSTS-DEWA-VI-E-CLS-039-Rev-000",
+      "PV FIELD LA":"MBRSP-MSTS-DEWA-VI-E-CLS-049-Rev-000",
+      "EARTH PITS":"MBRSP-MSTS-DEWA-VI-E-CLS-062-Rev-000",
+      "RIO PANEL":"MBRSP-MSTS-DEWA-VI-E-CLS-105-Rev-000",
+      "UPS":"MBRSP-MSTS-DEWA-VI-E-CLS-106-Rev-000",
+      "IDT":"MBRSP-MSTS-DEWA-VI-E-CLS-104-Rev-000"
+    };
+    const eqKey = eq.toUpperCase().trim();
+    var docRef = "";
+    for(var k in docRefMap){ if(eqKey.indexOf(k)!==-1){ docRef=docRefMap[k]; break; } }
+    const refBoxW = 56;
+    const refBoxX = PW - refBoxW;
+    if(docRef){
+      doc.setLineWidth(0.4);
+      doc.line(refBoxX, 0, refBoxX, headerH);   // divider before ref box
+      doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(10,80,140);
+      doc.text(docRef, refBoxX + refBoxW/2, headerH/2 + 1, {align:"center", maxWidth:refBoxW-4});
+    }
+    // Title centred between logo divider and ref divider
+    const titleAreaX = logoBoxW;
+    const titleAreaW = (docRef ? refBoxX : PW) - logoBoxW;
     doc.setFont("helvetica","bold");
     doc.setFontSize(10);
     doc.setTextColor(10,22,40);
-    doc.text("MBRSP-DEWA VI \u2014 1800MW Solar PV Power Plant", PW/2, 10, {align:"center"});
+    doc.text("MBRSP-DEWA VI \u2014 1800MW Solar PV Power Plant", titleAreaX + titleAreaW/2, 10, {align:"center"});
     doc.setFont("helvetica","normal");
     doc.setFontSize(8);
     doc.setTextColor(10,80,140);
-    doc.text(eq+" \u2014 Preventive Maintenance Checklist", PW/2, 17, {align:"center"});
+    doc.text(eq+" \u2014 Preventive Maintenance Checklist", titleAreaX + titleAreaW/2, 17, {align:"center"});
 
     let cy = headerH + gapH;
 
@@ -1745,7 +1774,7 @@ const overallRemarks = document.getElementById("overallRemarks").value || "-";
 
     sigLabels.forEach(function(lbl,i){
       const x = ML + i*(sigBoxW + 4);
-      doc.setFillColor(245,247,255);
+      doc.setFillColor(255,255,255);
       doc.setDrawColor(200,210,225);
       doc.setLineWidth(0.25);
       doc.roundedRect(x, sigY, sigBoxW, sigH, 1.5,1.5,"FD");
@@ -1888,12 +1917,40 @@ const overallRemarks = document.getElementById("overallRemarks").value || "-";
 
   // Header
   doc.setFillColor(255,255,255); doc.rect(0,0,PW,headerH,"F");
-  doc.setDrawColor(10,22,40); doc.setLineWidth(0.5); doc.line(0,headerH,PW,headerH);
+  doc.setDrawColor(10,22,40); doc.setLineWidth(0.5); doc.rect(0,0,PW,headerH,"S"); // outer border
   doc.addImage(LOGO_B64,"PNG",ML,4,34,14,undefined,"FAST");
+  // Vertical divider after logo
+  const logoBoxW2 = ML + 34 + 6;
+  doc.setLineWidth(0.4); doc.line(logoBoxW2, 0, logoBoxW2, headerH);
+  // Doc ref number — right side of header
+  const docRefMap2 = {
+    "DCB":"MBRSP-MSTS-DEWA-VI-E-CLS-036-Rev-000",
+    "NCU":"MBRSP-MSTS-DEWA-VI-E-CLS-037-Rev-000",
+    "RMU":"MBRSP-MSTS-DEWA-VI-E-CLS-038-Rev-000",
+    "INVERTER":"MBRSP-MSTS-DEWA-VI-E-CLS-039-Rev-000",
+    "PV FIELD LA":"MBRSP-MSTS-DEWA-VI-E-CLS-049-Rev-000",
+    "EARTH PITS":"MBRSP-MSTS-DEWA-VI-E-CLS-062-Rev-000",
+    "RIO PANEL":"MBRSP-MSTS-DEWA-VI-E-CLS-105-Rev-000",
+    "UPS":"MBRSP-MSTS-DEWA-VI-E-CLS-106-Rev-000",
+    "IDT":"MBRSP-MSTS-DEWA-VI-E-CLS-104-Rev-000"
+  };
+  const eqKey2 = eq.toUpperCase().trim();
+  var docRef2 = "";
+  for(var k2 in docRefMap2){ if(eqKey2.indexOf(k2)!==-1){ docRef2=docRefMap2[k2]; break; } }
+  const refBoxW2 = 56;
+  const refBoxX2 = PW - refBoxW2;
+  if(docRef2){
+    doc.setLineWidth(0.4); doc.line(refBoxX2, 0, refBoxX2, headerH);
+    doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(10,80,140);
+    doc.text(docRef2, refBoxX2 + refBoxW2/2, headerH/2 + 1, {align:"center", maxWidth:refBoxW2-4});
+  }
+  // Title centred between logo divider and ref divider
+  const titleAreaX2 = logoBoxW2;
+  const titleAreaW2 = (docRef2 ? refBoxX2 : PW) - logoBoxW2;
   doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(10,22,40);
-  doc.text("MBRSP-DEWA VI - 1800MW Solar PV Power Plant",PW/2,10,{align:"center"});
+  doc.text("MBRSP-DEWA VI - 1800MW Solar PV Power Plant", titleAreaX2 + titleAreaW2/2, 10, {align:"center"});
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(10,80,140);
-  doc.text(eq+" - Preventive Maintenance Checklist",PW/2,17,{align:"center"});
+  doc.text(eq+" - Preventive Maintenance Checklist", titleAreaX2 + titleAreaW2/2, 17, {align:"center"});
 
   let cy = headerH+gapH;
   const infoH=30, lW=usableW*0.105, vW=usableW*0.228;
@@ -2060,7 +2117,7 @@ const overallRemarks = document.getElementById("overallRemarks").value || "-";
   const sigNames2=[tech,submit,revBy], sigImgs2=[techSig,submitSig,reviewSig];
   sigLabels2.forEach(function(lbl,i){
     const x=ML+i*(sigBoxW+4);
-    doc.setFillColor(245,247,255); doc.setDrawColor(200,210,225); doc.setLineWidth(0.25);
+    doc.setFillColor(255,255,255); doc.setDrawColor(200,210,225); doc.setLineWidth(0.25);
     doc.roundedRect(x,sigY,sigBoxW,sigH,1.5,1.5,"FD");
     doc.setFont("helvetica","bold"); doc.setFontSize(5.5); doc.setTextColor(100,116,139);
     doc.text(lbl.toUpperCase(),x+2.5,sigY+4.5);
