@@ -269,11 +269,16 @@ body{font-family:'IBM Plex Sans',sans-serif;background:linear-gradient(135deg,#0
         <tbody id="obsBody"></tbody>
       </table>
     </div>
-    <div class="add-row-wrap">
+    <div class="add-row-wrap" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <button class="btn-add-row" onclick="addRow()">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
         Add Observation Row
       </button>
+      <label class="btn-add-row" style="cursor:pointer;border-color:var(--cyan);color:var(--cyan);background:#ecfeff;" title="Upload multiple images — one row per image">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="3" width="12" height="9" rx="1.5"/><polyline points="4,3 7,1 10,3"/><line x1="7" y1="5" x2="7" y2="10"/><line x1="4.5" y1="7.5" x2="7" y2="5"/><line x1="9.5" y1="7.5" x2="7" y2="5"/></svg>
+        Bulk Upload Images
+        <input type="file" accept="image/*" multiple style="display:none" onchange="bulkUploadImages(this)">
+      </label>
     </div>
   </div>
 
@@ -1024,6 +1029,40 @@ function showStatus(msg,type='info'){
   bar.style.display='flex';txt.textContent=msg;
   if(statusTimer) clearTimeout(statusTimer);
   statusTimer=setTimeout(()=>bar.style.display='none',6000);
+}
+
+// ================================================================
+// BULK UPLOAD IMAGES
+// ================================================================
+function bulkUploadImages(input){
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  let loaded = 0;
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Add a new row for each image
+      const id = ++rowCounter;
+      const row = {
+        id, srNo: rows.length + 1,
+        date: getDate(), phase: getPhase(), mvps: getMvps(),
+        equipment:'', inv:'', dcb:'', string:'', observation:'',
+        images:[{ name: file.name, data: e.target.result }],
+        materialRequired:'No', materialDesc:'', materialAvail:'',
+        qty:'', uom:'', status:'Open'
+      };
+      rows.push(row);
+      loaded++;
+      if(loaded === files.length){
+        renderTable();
+        updateStats();
+        showStatus(`${files.length} image(s) uploaded — ${files.length} observation row(s) added.`, 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  // Reset input so same files can be re-selected if needed
+  input.value = '';
 }
 
 // ================================================================
