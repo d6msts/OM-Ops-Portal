@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM Checklist Portal — MBRSP-DEWA VI</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:    #0a1628;
+  --navy2:   #0d1f3c;
+  --blue:    #1a56db;
+  --blue2:   #2563eb;
+  --cyan:    #06b6d4;
+  --gold:    #f59e0b;
+  --green:   #10b981;
+  --red:     #ef4444;
+  --slate:   #64748b;
+  --light:   #e2e8f0;
+  --lighter: #f1f5f9;
+  --white:   #ffffff;
+  --border:  #cbd5e1;
+  --shadow:  0 4px 24px rgba(10,22,40,0.18);
+  --shadow2: 0 2px 8px rgba(10,22,40,0.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'IBM Plex Sans',sans-serif;
+  background:linear-gradient(135deg,#0a1628 0%,#0d2347 50%,#0a1628 100%);
+  min-height:100vh;
+  color:var(--navy);
+}
+
+/* TOP BAR */
+.topbar{
+  background:linear-gradient(90deg,var(--navy) 0%,var(--navy2) 100%);
+  border-bottom:2px solid var(--blue);
+  padding:0 32px;
+  height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 20px rgba(0,0,0,0.4);
+}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar img{height:40px;border-radius:4px}
+.topbar-title{color:var(--white);font-size:13px;font-weight:500;letter-spacing:0.05em;line-height:1.4}
+.topbar-title span{display:block;color:var(--cyan);font-size:10px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;margin-top:2px}
+.topbar-right{display:flex;gap:10px;align-items:center}
+
+/* MAIN LAYOUT */
+.main-wrap{max-width:1320px;margin:0 auto;padding:24px 24px 60px}
+
+/* CARD */
+.card{
+  background:var(--white);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  margin-bottom:20px;
+  overflow:hidden;
+}
+.card-header{
+  background:linear-gradient(90deg,var(--navy) 0%,#0d2347 100%);
+  color:var(--white);
+  padding:14px 24px;
+  display:flex;align-items:center;gap:10px;
+  font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  justify-content:center;text-align:center;
+}
+.card-header .dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 6px var(--cyan);
+}
+.card-body{padding:20px 24px}
+
+/* INFO GRID */
+.info-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+.field-group{display:flex;flex-direction:column;gap:5px}
+.field-group label{
+  font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--slate);
+}
+.field-group input,
+.field-group select{
+  height:38px;
+  border:1.5px solid var(--border);
+  border-radius:7px;
+  padding:0 12px;
+  font-family:inherit;
+  font-size:13px;
+  color:var(--navy);
+  background:var(--lighter);
+  transition:border-color 0.2s,box-shadow 0.2s;
+  width:100%;
+}
+.field-group input:focus,
+.field-group select:focus{
+  outline:none;
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(26,86,219,0.12);
+  background:var(--white);
+}
+
+/* ============================================================
+   FREQUENCY FILTER BAR  ← NEW
+   ============================================================ */
+.freq-filter-bar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 20px;
+  background:linear-gradient(90deg,#f8faff 0%,#eff5ff 100%);
+  border-bottom:1px solid #dce7fb;
+  flex-wrap:wrap;
+}
+.freq-filter-label{
+  font-size:10px;font-weight:700;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--slate);
+  margin-right:4px;
+  white-space:nowrap;
+}
+.freq-filter-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 14px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:0.07em;
+  cursor:pointer;border:2px solid transparent;
+  transition:all 0.18s;
+  user-select:none;
+  white-space:nowrap;
+}
+.freq-filter-pill:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,0.12)}
+.freq-filter-pill.pill-all   {background:#e2e8f0;color:#334155;border-color:#cbd5e1}
+.freq-filter-pill.pill-M     {background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
+.freq-filter-pill.pill-Q     {background:#fce7f3;color:#9d174d;border-color:#fbcfe8}
+.freq-filter-pill.pill-HY    {background:#fef3c7;color:#92400e;border-color:#fde68a}
+.freq-filter-pill.pill-Y     {background:#ede9fe;color:#5b21b6;border-color:#ddd6fe}
+.freq-filter-pill.pill-A     {background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.freq-filter-pill.pill-H     {background:#fee2e2;color:#b91c1c;border-color:#fecaca}
+/* Active states — stronger fill + navy border */
+.freq-filter-pill.active.pill-all  {background:#334155;color:#fff;border-color:#1e293b;box-shadow:0 2px 8px rgba(51,65,85,0.35)}
+.freq-filter-pill.active.pill-M    {background:#0369a1;color:#fff;border-color:#0284c7;box-shadow:0 2px 8px rgba(3,105,161,0.35)}
+.freq-filter-pill.active.pill-Q    {background:#9d174d;color:#fff;border-color:#be185d;box-shadow:0 2px 8px rgba(157,23,77,0.35)}
+.freq-filter-pill.active.pill-HY   {background:#92400e;color:#fff;border-color:#b45309;box-shadow:0 2px 8px rgba(146,64,14,0.35)}
+.freq-filter-pill.active.pill-Y    {background:#5b21b6;color:#fff;border-color:#6d28d9;box-shadow:0 2px 8px rgba(91,33,182,0.35)}
+.freq-filter-pill.active.pill-A    {background:#166534;color:#fff;border-color:#15803d;box-shadow:0 2px 8px rgba(22,101,52,0.35)}
+.freq-filter-pill.active.pill-H    {background:#b91c1c;color:#fff;border-color:#dc2626;box-shadow:0 2px 8px rgba(185,28,28,0.35)}
+.freq-filter-count{
+  display:inline-block;
+  background:rgba(255,255,255,0.35);
+  border-radius:10px;
+  padding:0 5px;
+  font-size:9px;
+  font-weight:800;
+  min-width:16px;
+  text-align:center;
+}
+.freq-filter-info{
+  margin-left:auto;
+  font-size:11px;color:var(--slate);
+  white-space:nowrap;
+  font-style:italic;
+}
+.freq-filter-info strong{color:var(--blue);font-style:normal}
+/* Hidden rows */
+#checklistBody tr.freq-hidden{display:none}
+
+/* CHECKLIST TABLE */
+.table-wrap{overflow-x:auto;border-radius:0 0 10px 10px;border:1.5px solid var(--border);border-top:none}
+#checklistTable{
+  width:100%;border-collapse:collapse;
+  font-size:13px;
+}
+#checklistTable thead tr{
+  background:linear-gradient(90deg,var(--navy) 0%,#0d2347 100%);
+  color:var(--white);
+}
+#checklistTable th{
+  padding:12px 14px;text-align:left;
+  font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;
+  white-space:nowrap;
+}
+#checklistTable td{
+  padding:10px 14px;
+  border-bottom:1px solid #e8edf4;
+  vertical-align:top;
+}
+#checklistTable tbody tr:last-child td{border-bottom:none}
+#checklistTable tbody tr:nth-child(even):not(.freq-hidden){background:#f8fafd}
+#checklistTable tbody tr:hover:not(.freq-hidden){background:#eff5ff}
+
+.sr-cell{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;font-weight:500;
+  color:var(--blue);
+  width:50px;text-align:center;
+}
+.check-cell{min-width:220px;color:var(--navy);line-height:1.5}
+.req-cell{min-width:160px;color:#334155;font-size:12px;line-height:1.5}
+.freq-cell{
+  width:70px;text-align:center;
+}
+.freq-badge{
+  display:inline-block;
+  padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:600;letter-spacing:0.06em;
+  background:#dbeafe;color:#1e40af;
+}
+.freq-badge.A{background:#dcfce7;color:#166534}
+.freq-badge.HY{background:#fef3c7;color:#92400e}
+.freq-badge.Y{background:#ede9fe;color:#5b21b6}
+.freq-badge.Q{background:#fce7f3;color:#9d174d}
+.freq-badge.M{background:#e0f2fe;color:#0369a1}
+.freq-badge.H{background:#fee2e2;color:#b91c1c}
+
+.remark-cell{min-width:200px}
+.remark-input{
+  width:100%;
+  min-height:36px;
+  max-height:200px;
+  border:1.5px solid var(--border);
+  border-radius:6px;
+  padding:7px 10px;
+  font-family:inherit;font-size:12px;
+  color:var(--navy);
+  background:var(--lighter);
+  resize:vertical;
+  line-height:1.5;
+  transition:border-color 0.2s,box-shadow 0.2s;
+  overflow-y:auto;
+  word-wrap:break-word;
+  white-space:pre-wrap;
+}
+.remark-input:focus{
+  outline:none;
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(26,86,219,0.12);
+  background:var(--white);
+}
+
+/* BATTERY SECTION */
+.battery-section{margin-top:16px}
+.battery-section h3{
+  font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--navy);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.battery-section h3::before{
+  content:'';width:4px;height:16px;border-radius:2px;background:var(--gold);
+}
+.battery-table{width:100%;border-collapse:collapse;font-size:12px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border)}
+.battery-table th{background:var(--navy);color:var(--white);padding:9px 12px;text-align:center;font-size:11px;font-weight:600;letter-spacing:0.05em}
+.battery-table td{border:1px solid var(--border);padding:6px 10px;text-align:center;background:var(--lighter)}
+.battery-table td:first-child{font-weight:600;background:#f0f4ff;color:var(--navy);width:80px}
+.battery-input{
+  width:75px;height:30px;
+  border:1.5px solid var(--border);border-radius:5px;
+  padding:0 8px;font-family:inherit;font-size:12px;
+  background:var(--white);text-align:center;
+}
+.battery-input:focus{outline:none;border-color:var(--blue);background:var(--white)}
+
+/* SIGNATURE SECTION */
+.sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.sig-card{
+  border:1.5px solid var(--border);border-radius:10px;
+  padding:16px;background:var(--white);
+  display:flex;flex-direction:column;gap:10px;
+}
+.sig-card h4{
+  font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--slate);
+  border-bottom:2px solid var(--blue);
+  padding-bottom:8px;
+}
+.sig-card select{
+  height:36px;border:1.5px solid var(--border);border-radius:6px;
+  padding:0 10px;font-family:inherit;font-size:12px;color:var(--navy);
+  background:var(--white);width:100%;
+}
+.sig-upload-wrap{
+  border:2px dashed var(--border);border-radius:8px;
+  padding:12px;text-align:center;
+  cursor:pointer;transition:border-color 0.2s,background 0.2s;
+  position:relative;
+}
+.sig-upload-wrap:hover{border-color:var(--blue);background:#eff5ff}
+.sig-upload-wrap input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.sig-upload-label{font-size:11px;color:var(--slate);pointer-events:none}
+.sig-preview{
+  max-height:60px;max-width:100%;border-radius:4px;
+  border:1px solid var(--border);background:var(--white);
+  display:none;object-fit:contain;
+}
+.sig-preview.visible{display:block;margin:0 auto}
+
+/* ACTION BUTTONS */
+.actions{
+  display:flex;gap:12px;justify-content:center;
+  padding:24px 0 8px;flex-wrap:wrap;
+}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 28px;border-radius:8px;
+  font-family:inherit;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all 0.2s;
+  letter-spacing:0.03em;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--blue) 0%,var(--blue2) 100%);
+  color:var(--white);box-shadow:0 4px 14px rgba(26,86,219,0.35);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(26,86,219,0.45)}
+.btn-success{
+  background:linear-gradient(135deg,var(--green) 0%,#059669 100%);
+  color:var(--white);box-shadow:0 4px 14px rgba(16,185,129,0.35);
+}
+.btn-success:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,0.45)}
+.btn-gold{
+  background:linear-gradient(135deg,var(--gold) 0%,#d97706 100%);
+  color:var(--navy);box-shadow:0 4px 14px rgba(245,158,11,0.35);
+}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(245,158,11,0.45)}
+.btn svg{width:16px;height:16px;flex-shrink:0}
+
+/* STATUS BAR */
+.status-bar{
+  background:#f0f9ff;border:1.5px solid #bae6fd;
+  border-radius:8px;padding:10px 16px;
+  font-size:12px;color:#0369a1;
+  display:none;align-items:center;gap:8px;margin-top:12px;
+}
+.status-bar.visible{display:flex}
+.status-bar.error{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.status-bar.success{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+
+/* EMPTY STATE */
+.empty-state{
+  padding:48px;text-align:center;
+  color:var(--slate);
+}
+.empty-state svg{width:48px;height:48px;margin-bottom:12px;opacity:0.3}
+.empty-state p{font-size:13px}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .info-grid{grid-template-columns:repeat(2,1fr)}
+  .sig-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .info-grid{grid-template-columns:1fr}
+  .topbar{padding:0 16px}
+  .card-body{padding:14px 16px}
+  .main-wrap{padding:12px 12px 40px}
+}
+
+/* MOBILE ENHANCEMENTS */
+.btn { min-height: 44px; touch-action: manipulation; }
+.field-group input, .field-group select { min-height: 44px; font-size: 16px; }
+.sig-card select { min-height: 44px; font-size: 16px; }
+.remark-input { font-size: 16px; }
+.battery-input { min-height: 40px; font-size: 16px; width: 60px; }
+
+@media(max-width:640px){
+  .topbar { height: auto; padding: 10px 12px; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .topbar-right { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .topbar-right .btn { padding: 9px 6px; font-size: 11px; gap: 4px; justify-content: center; }
+  .topbar-right .btn svg { width: 14px; height: 14px; }
+  .topbar-left { gap: 10px; }
+  .topbar img { height: 32px; }
+  .topbar-title { font-size: 11px; }
+  .freq-filter-bar { gap: 6px; padding: 10px 14px; }
+  .freq-filter-pill { padding: 4px 10px; font-size: 10px; }
+  .freq-filter-info { display: none; }
+}
+@media(max-width:400px){
+  .topbar-right { grid-template-columns: 1fr 1fr; }
+  .topbar-right .btn-zip { grid-column: 1/-1; }
+}
+@media(max-width:600px){
+  .info-grid { grid-template-columns: 1fr 1fr; }
+  .card-body { padding: 12px 14px; }
+  .main-wrap { padding: 8px 8px 60px; }
+  .actions { gap: 8px; padding: 16px 0 6px; flex-direction: column; align-items: center; }
+  .actions .btn { width: 100%; justify-content: center; max-width: 360px; }
+  #checklistTable th, #checklistTable td { padding: 8px 8px; font-size: 12px; }
+  .freq-badge { padding: 2px 6px; font-size: 10px; }
+  .battery-table th, .battery-table td { padding: 5px 4px; font-size: 10px; }
+}
+@media(max-width:400px){
+  .sig-grid { grid-template-columns: 1fr; }
+  .info-grid { grid-template-columns: 1fr; }
+}
+
+.mobile-fab-bar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+  background: var(--navy);
+  border-top: 2px solid var(--blue);
+  padding: 8px 12px 12px;
+  gap: 8px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+}
+@media(max-width:640px){
+  .mobile-fab-bar { display: flex; }
+  .mobile-fab-bar .btn { flex: 1; justify-content: center; padding: 11px 4px; font-size: 11px; min-height: 44px; }
+  .actions { display: none; }
+  .topbar-right { display: none; }
+}
+
+/* LOADING OVERLAY */
+.overlay{
+  position:fixed;inset:0;background:rgba(10,22,40,0.75);
+  z-index:999;display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:16px;
+}
+.overlay.visible{display:flex}
+.spinner{
+  width:44px;height:44px;
+  border:4px solid rgba(255,255,255,0.2);
+  border-top-color:var(--cyan);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay p{color:var(--white);font-size:14px;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <p id="overlayMsg">Generating report…</p>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <img src="data:image/png;base64,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" alt="Logo" onerror="this.style.display='none'">
+    <div class="topbar-title">
+      MBRSP-DEWA VI · 1800MW Solar PV Power Plant
+      <span>Preventive Maintenance Checklist Portal</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-gold" onclick="generateExcel()" title="Export Excel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Export Excel
+    </button>
+    <button class="btn btn-primary" onclick="generatePDF()" title="Generate PDF">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Generate PDF
+    </button>
+    <button class="btn btn-zip" onclick="generateZip()" style="background:linear-gradient(135deg,#7c3aed 0%,#6d28d9 100%);color:#fff;box-shadow:0 4px 14px rgba(109,40,217,0.35)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download ZIP
+    </button>
+  </div>
+</div>
+
+<div class="main-wrap">
+
+<!-- WORK ORDER INFO -->
+<div class="card">
+  <div class="card-header"><div class="dot"></div>Work Order Information</div>
+  <div class="card-body">
+    <div class="info-grid">
+      <div class="field-group">
+        <label>Plant</label>
+        <input value="DEWA-VI" readonly style="background:#f0f4ff;color:var(--navy);font-weight:600">
+      </div>
+      <div class="field-group">
+        <label>Maint. Order No.</label>
+        <input id="mo" placeholder="Enter MO number">
+      </div>
+      <div class="field-group">
+        <label>PTW No.</label>
+        <input id="ptw" placeholder="Enter PTW number">
+      </div>
+      <div class="field-group">
+        <label>Phase</label>
+        <select id="phase" onchange="updateMVPS()">
+          <option>A</option><option>B</option><option>C</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>MVPS No.</label>
+        <select id="mvps"></select>
+      </div>
+      <div class="field-group">
+        <label>Equipment</label>
+        <select id="equipmentSelect" onchange="loadChecklist()"></select>
+      </div>
+      <div class="field-group">
+        <label>Equipment Sr. No.</label>
+        <input id="equipSr" placeholder="Serial number">
+      </div>
+      <div class="field-group">
+        <label>Equipment ID</label>
+        <input id="equipId" placeholder="Equipment ID">
+      </div>
+      <div class="field-group">
+        <label>Frequency</label>
+        <input id="freq" placeholder="Maintenance frequency">
+      </div>
+      <div class="field-group">
+        <label>PM Perform Date</label>
+        <input type="date" id="plannedDate">
+      </div>
+      <div class="field-group">
+        <label>Start Time</label>
+        <input type="time" id="startTime">
+      </div>
+      <div class="field-group">
+        <label>Finish Time</label>
+        <input type="time" id="finishTime">
+      </div>
+      <div class="field-group">
+        <label>Maintenance In-Charge</label>
+        <select id="maintIncharge">
+          <option>Pramod Kumar Samala</option>
+          <option>Anil Kumar Cherukuri</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Position</label>
+        <select id="position">
+          <option>PV Engineer</option>
+          <option>Sr. PV Engineer</option>
+          <option>PV Lead</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Reviewed By</label>
+        <select id="reviewer">
+          <option>Anil Kumar Cherukuri</option>
+          <option>Bikash Kumar Luha</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKLIST -->
+<div class="card">
+  <div class="card-header">
+    <div class="dot" style="background:var(--gold);box-shadow:0 0 6px var(--gold)"></div>
+    <span id="checklistTitle">Checklist — Select an Equipment Above</span>
+  </div>
+
+  <!-- ═══ FREQUENCY FILTER BAR (NEW) ═══ -->
+  <div class="freq-filter-bar" id="freqFilterBar" style="display:none">
+    <span class="freq-filter-label">&#x1F50D; Filter by Frequency:</span>
+    <span class="freq-filter-pill pill-all active" data-freq="ALL" onclick="setFreqFilter('ALL')">
+      All <span class="freq-filter-count" id="cnt-ALL">0</span>
+    </span>
+    <span class="freq-filter-pill pill-M" data-freq="M" onclick="setFreqFilter('M')">
+      M — Monthly <span class="freq-filter-count" id="cnt-M">0</span>
+    </span>
+    <span class="freq-filter-pill pill-Q" data-freq="Q" onclick="setFreqFilter('Q')">
+      Q — Quarterly <span class="freq-filter-count" id="cnt-Q">0</span>
+    </span>
+    <span class="freq-filter-pill pill-HY" data-freq="HY" onclick="setFreqFilter('HY')">
+      HY — Half-Yearly <span class="freq-filter-count" id="cnt-HY">0</span>
+    </span>
+    <span class="freq-filter-pill pill-Y" data-freq="Y" onclick="setFreqFilter('Y')">
+      Y — Yearly <span class="freq-filter-count" id="cnt-Y">0</span>
+    </span>
+    <span class="freq-filter-pill pill-A" data-freq="A" onclick="setFreqFilter('A')">
+      A — Annual <span class="freq-filter-count" id="cnt-A">0</span>
+    </span>
+    <span class="freq-filter-pill pill-H" data-freq="H" onclick="setFreqFilter('H')">
+      H — Half-Yearly (Alt) <span class="freq-filter-count" id="cnt-H">0</span>
+    </span>
+    <span class="freq-filter-info" id="freqFilterInfo">Showing all checkpoints</span>
+  </div>
+
+  <div class="card-body" style="padding:0">
+    <div class="table-wrap">
+      <table id="checklistTable">
+        <thead>
+          <tr>
+            <th style="width:50px">Sr</th>
+            <th>Check Point</th>
+            <th style="min-width:160px">Requirement</th>
+            <th style="width:70px;text-align:center">Freq</th>
+            <th style="min-width:220px">Remarks / Findings</th>
+          </tr>
+        </thead>
+        <tbody id="checklistBody">
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/></svg>
+              <p>Select an equipment type from the Work Order section above to load its checklist.</p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="batterySection"></div>
+  </div>
+</div>
+
+<!-- OVERALL REMARKS -->
+<div class="card" id="overallRemarksCard">
+  <div class="card-header">
+    <div class="dot" style="background:var(--gold);box-shadow:0 0 6px var(--gold)"></div>
+    Overall Remarks / Observations
+  </div>
+  <div class="card-body">
+    <textarea id="overallRemarks" class="remark-input"
+      placeholder="Enter overall remarks, observations, or findings for this PM activity…"
+      style="width:100%;min-height:80px;max-height:300px;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--lighter)"
+      oninput="autoResize(this);saveDraft()"></textarea>
+  </div>
+</div>
+
+<!-- SIGNATURES -->
+<div class="card">
+  <div class="card-header">
+    <div class="dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></div>
+    Authorisation &amp; Signatures
+  </div>
+  <div class="card-body">
+    <div class="sig-grid">
+
+      <div class="sig-card">
+        <h4>Performed By (Technician)</h4>
+        <select id="tech">
+          <option>NAVDEEP SINGH</option><option>VISHAL SHARMA</option>
+          <option>MOHAN KRISHNA KALIGITHI</option><option>SAKTHIVEL VILVADURAI</option>
+          <option>SURESH GOUD GADDAMEEDI</option><option>PRANEEL GANGULA</option>
+          <option>BALMURUGAN THANGAVEL</option><option>Mahesh Sirnam</option>
+          <option>RAMAR KANGANI</option><option>MURUGAN SETHUPATHY PAULPANDI</option>
+          <option>SHAIKSHAVALI DUDEKULA</option><option>AKHIL VAZHYIL</option>
+          <option>RAJESH KUMAR SATTI</option><option>AKHIL RODDA</option>
+          <option>AJAY KUMAR</option><option>GOURAV</option>
+          <option>PREMDAS KHATROTH</option><option>DEEPAK BABU</option>
+          <option>SAI KUMAR CHIKATI</option><option>MARIMUTHU SUBBAIAH</option>
+          <option>NARESH NADIKATLA</option><option>RAGHUVEER</option>
+          <option>SAI KUMAR RAVULA</option><option>PANDIYAN RAMAIAH</option>
+          <option>SANTOSHREDDY SINGARAPU</option>
+        </select>
+        <div class="sig-upload-wrap" id="techUploadWrap">
+          <input type="file" accept="image/*" id="techSign" onchange="handleSignature(this,'techPreview','techUploadLabel')">
+          <div class="sig-upload-label" id="techUploadLabel">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div>Upload Signature</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px">JPG, PNG, GIF</div>
+          </div>
+        </div>
+        <img id="techPreview" class="sig-preview" src="" alt="Signature">
+      </div>
+
+      <div class="sig-card">
+        <h4>Submitted By</h4>
+        <select id="submitBy">
+          <option>Pramod Kumar Samala - PV Engineer</option>
+          <option>Anil Kumar Cherukuri - Sr. PV Engineer</option>
+        </select>
+        <div class="sig-upload-wrap" id="submitUploadWrap">
+          <input type="file" accept="image/*" id="submitSign" onchange="handleSignature(this,'submitPreview','submitUploadLabel')">
+          <div class="sig-upload-label" id="submitUploadLabel">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div>Upload Signature</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px">JPG, PNG, GIF</div>
+          </div>
+        </div>
+        <img id="submitPreview" class="sig-preview" src="" alt="Signature">
+      </div>
+
+      <div class="sig-card">
+        <h4>Reviewed By</h4>
+        <select id="reviewBy">
+          <option>Anil Kumar Cherukuri - Sr. PV Engineer</option>
+          <option>Bikash Kumar Luha - PV Lead</option>
+        </select>
+        <div class="sig-upload-wrap" id="reviewUploadWrap">
+          <input type="file" accept="image/*" id="reviewSign" onchange="handleSignature(this,'reviewPreview','reviewUploadLabel')">
+          <div class="sig-upload-label" id="reviewUploadLabel">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div>Upload Signature</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px">JPG, PNG, GIF</div>
+          </div>
+        </div>
+        <img id="reviewPreview" class="sig-preview" src="" alt="Signature">
+      </div>
+
+    </div>
+    <div class="status-bar" id="statusBar"></div>
+  </div>
+</div>
+
+<!-- ACTIONS -->
+<div class="actions">
+  <button class="btn btn-success" onclick="generateExcel()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Export to Excel
+  </button>
+  <button class="btn btn-primary" onclick="generatePDF()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Generate PDF Report
+  </button>
+  <button class="btn" onclick="generateZip()" style="background:linear-gradient(135deg,#7c3aed 0%,#6d28d9 100%);color:#fff;box-shadow:0 4px 14px rgba(109,40,217,0.35)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Download All (ZIP)
+  </button>
+</div>
+
+<!-- MOBILE FAB BAR -->
+<div class="mobile-fab-bar">
+  <button class="btn btn-success" onclick="generateExcel()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Excel
+  </button>
+  <button class="btn btn-primary" onclick="generatePDF()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    PDF
+  </button>
+  <button class="btn btn-zip" onclick="generateZip()" style="background:linear-gradient(135deg,#7c3aed 0%,#6d28d9 100%);color:#fff">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    ZIP
+  </button>
+</div>
+
+</div><!-- /main-wrap -->
+
+<script>
+// ================================================================
+// LOGO
+// ================================================================
+const LOGO_B64 = "data:image/png;base64,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";
+
+// ================================================================
+// CHECKLIST DATA
+// ================================================================
+const checklistDB = {
+INVERTER:[
+{sr:1,check:"Check the appearance of the Inverter for damage or deformation.",req:"No damage",freq:"HY"},
+{sr:2,check:"Check for dust and dirt in the inverter",req:"Should be Cleaned",freq:"HY"},
+{sr:3,check:"Check the correct ventilation of the equipment: fans, front air grates",req:"Should be work properly",freq:"M"},
+{sr:4,check:"Listen for abnormal sounds during the operation of the inverter",req:"No abnormal Noise",freq:"HY"},
+{sr:5,check:"Check whether the cable connection is detached or loose.",req:"No loose",freq:"M"},
+{sr:6,check:"Check whether the cable is damaged, and focus on checking whether the surface of the cable that contacts the metal surface has signs of cuts.",req:"No damaged",freq:"HY"},
+{sr:7,check:"Check whether all the ground cables are reliably grounded",req:"Should be Grounded",freq:"M"},
+{sr:8,check:"Torquing or tightening of all cables, monitoring and auxiliary distribution",req:"Retorque all the bolt",freq:"Y"},
+{sr:9,check:"Check the healthiness of Installed fuse",req:"Should be working fine and Healthy",freq:"HY"},
+{sr:10,check:"Thermographic inspection and retighten the electrical connections of the inverter.",req:"Perform the Thermography",freq:"Y"},
+{sr:11,check:"check the healthiness of SPD",req:"Should be work properly",freq:"HY"},
+{sr:12,check:"Check the door locks of all door in the inverter",req:"should be properly locked",freq:"Y"},
+{sr:13,check:"Comprehensive review of inverter internal components, cabling, grounding, fuses, hot spots, firmware upgrades",req:"Should be work properly",freq:"HY"},
+{sr:14,check:"Visual inspection and functionality test of protective and safety equipment (e.g.,current circuit breakers, line circuit breakers, and power switches)",req:"all should be tested",freq:"HY"},
+{sr:15,check:"Inspections of cabling & grounding",req:"Should be properly fixed",freq:"HY"},
+{sr:16,check:"Check the warning lables properly visible",req:"should be properly visable",freq:"Y"},
+{sr:17,check:"Ensure to check the ventilation of the air inlet",req:"should be properly visable",freq:"HY"},
+{sr:18,check:"Check the all filters of inverter",req:"should be properly clean",freq:"HY"},
+{sr:19,check:"Check the AC breakar healthiness",req:"should be properly worked",freq:"HY"},
+{sr:20,check:"Perform insulation resistance test for DC cable",req:"IR test for DC cable",freq:"Y"},
+{sr:21,check:"Check the function of the internal and external emergency shutoff functionality",req:"Should be work properly",freq:"HY"}
+],
+IDT:[
+{sr:1,check:"Replacement / Regeneration of Silica gel Breather if necessary",req:"Should be Working Fine",freq:"A"},
+{sr:2,check:"Dissolved Gas Analysis",req:"H2<100ppm, CH4<120ppm, C2H2<35ppm, C2H4<50ppm, C2H6<65ppm, CO<350ppm, CO2<2500ppm",freq:"A"},
+{sr:3,check:"Oil Sampling",req:"BDV>60kV, Moisture<15PPM, Acidity<0.3MG KOH/G",freq:"A"},
+{sr:4,check:"Buchholz Relay Functional Tests",req:"Perform the functional test",freq:"H"},
+{sr:5,check:"Tan Delta & Capacitance Measurement of Condenser Bushings",req:"Record the Value",freq:"A"},
+{sr:6,check:"OTI / WTI Tests",req:"Check the calibration",freq:"H"},
+{sr:7,check:"Tap changer operation",req:"Record the Position",freq:"A"},
+{sr:8,check:"Insulation Resistance of Windings",req:"Should be in Giga ohm",freq:"A"},
+{sr:9,check:"Check earthing connection",req:"Firmly Tightened",freq:"H"},
+{sr:10,check:"Check damage or corrosion on radiator / external area",req:"No Corrosion",freq:"M"},
+{sr:11,check:"Visual inspection of transformer for abnormal sound",req:"No abnormal sounds",freq:"M"},
+{sr:12,check:"Check oil leakage from HV/LV bushings",req:"No Oil Leakages",freq:"M"},
+{sr:13,check:"Check PRD device",req:"Should be operative",freq:"M"},
+{sr:14,check:"Check oil temperature and winding temperature",req:"Record the Value",freq:"M"},
+{sr:15,check:"Check bushing for cracks or damage",req:"No Crack",freq:"A"},
+{sr:16,check:"Check wheel blocking",req:"Should be Intact",freq:"A"},
+{sr:17,check:"Check antivibration pad status",req:"Should be in place",freq:"A"},
+{sr:18,check:"Check MOG",req:"Note down the Value",freq:"M"},
+{sr:19,check:"Check fasteners for corrosion",req:"No corrosion",freq:"M"},
+{sr:20,check:"Check silica gel color",req:"Shall be blue in color",freq:"M"},
+{sr:21,check:"Check transformer cable terminations",req:"Should be fine",freq:"A"},
+{sr:22,check:"Visual inspection of transformer and cabinet",req:"Should be fine",freq:"M"},
+{sr:23,check:"Visual inspection of insulator connections",req:"No Crack",freq:"M"},
+{sr:24,check:"Visual inspection of transformer sealing joints",req:"Should be fine",freq:"M"},
+{sr:25,check:"Visual inspection of optical and acoustic indicators",req:"Working fine",freq:"M"},
+{sr:26,check:"Visual inspection of WTI and OTI",req:"Should be working fine",freq:"M"},
+{sr:27,check:"Visual inspection of transformer soak ground wells",req:"Should be Clean",freq:"M"},
+{sr:28,check:"Check alarm test",req:"Should be fine",freq:"H"},
+{sr:29,check:"Check auxiliary relays",req:"Working fine",freq:"H"},
+{sr:30,check:"Check operation of switchgear",req:"Operate",freq:"H"},
+{sr:31,check:"Check protection relay operation",req:"Working fine",freq:"H"},
+{sr:32,check:"Check heating elements",req:"Operate",freq:"H"},
+{sr:33,check:"Check rust removal of transformer",req:"Rustfree",freq:"A"},
+{sr:34,check:"Transformer touch-up paint",req:"Good Condition",freq:"A"},
+{sr:35,check:"Gasket repairs",req:"Should be fine",freq:"A"},
+{sr:36,check:"Check terminal connections",req:"Should be fine",freq:"A"},
+{sr:37,check:"Test ratio measurement",req:"Should be fine",freq:"A"},
+{sr:38,check:"Insulation resistance of protective wiring cables",req:"Should be fine",freq:"A"},
+{sr:39,check:"Oil top-up",req:"If required",freq:"A"}
+],
+RMU:[
+{sr:1,check:"Check The Pressure gauge for any Crack, Damages or abnormal",req:"No Crack Or damages",freq:"Y"},
+{sr:3,check:"Check Bus bar gas pressure Indicator in green area — Normal pressure, Indicator in red area — Low pressure",req:"Note the Pressure Value",freq:"Y"},
+{sr:4,check:"Check if the product has any part of the deformation, the cleanliness of the product and the surrounding environment.",req:"Should be Clean",freq:"Y"},
+{sr:5,check:"Check the operating mechanism and control mechanism of the switch.",req:"Should be Working Fine",freq:"Q"},
+{sr:6,check:"Check the interlocking system",req:"Should be Working Fine",freq:"Q"},
+{sr:7,check:"Check the protection system of RMU",req:"Should be Working Fine",freq:"Q"},
+{sr:8,check:"Check the funtional tests for alarm",req:"Should be Working Fine",freq:"Q"},
+{sr:9,check:"Check all the switchgear accessories and auxiliary equipment.",req:"Should be Working Fine",freq:"Q"},
+{sr:10,check:"abnormal condition while operating under normal voltage, such as: abnormal noise, smell or arc light.",req:"No abnormal noice or smell",freq:"Y"},
+{sr:11,check:"check for Aux Supply Isolation",req:"Should be Working Fine",freq:"Y"},
+{sr:12,check:"Check whether loop connection and grounding connection is firm.",req:"Should be Working Fine",freq:"Y"},
+{sr:13,check:"Lubricate contact point, withdraw parts and transmission parts of interlock.",req:"Should be done",freq:"Y"},
+{sr:14,check:"Note the value of Operation counter",req:"Should be noted",freq:"Y"},
+{sr:15,check:"Check the Status of Ac control supply",req:"Should be Working Fine",freq:"Y"},
+{sr:16,check:"Check the Status if DC control supply",req:"Should be Working Fine",freq:"Y"},
+{sr:17,check:"Check the status of Control circuit",req:"Should be Working Fine",freq:"Y"},
+{sr:18,check:"Check whether the cable connection is detached or loose.",req:"No loose",freq:"HY"},
+{sr:19,check:"Check whether the cable is damaged, and focus on checking whether the surface of the cable that contacts the metal surface has signs of cuts.",req:"No damaged",freq:"HY"},
+{sr:20,check:"Check whether all the ground cables are reliably grounded",req:"Should be Grounded",freq:"Y"},
+{sr:21,check:"Check the healthiness of Installed fuse and insulators",req:"Should be Working Fine",freq:"Q"},
+{sr:22,check:"Perform the thermography",req:"Perform the Thermography",freq:"Y"},
+{sr:23,check:"Check the cable shielding is led through the centre hole of the current transformer and earthed properly",req:"Should be properly connected",freq:"Y"},
+{sr:24,check:"perform the CT,Breakar,LBS & relay testing",req:"need to perform",freq:"Y"},
+{sr:25,check:"Check the trip/close coil healthiness",req:"should be in working",freq:"Y"},
+{sr:26,check:"Check the LED lamps healthiness",req:"should be in working",freq:"Y"}
+],
+RIO_PANEL:[
+{sr:1,check:"Visual Inpsection of Rio Panel",req:"No rust",freq:"M"},
+{sr:2,check:"Ensure panel door was closed properly",req:"should be properly locked",freq:"M"},
+{sr:3,check:"ensure of cabling & panel earting cable grounded",req:"Should be Grounded",freq:"M"},
+{sr:4,check:"Check the All SPD healthy",req:"Should be work properly",freq:"M"},
+{sr:5,check:"Ensure the all communication switchs are Working",req:"Should be work properly",freq:"M"},
+{sr:6,check:"Check the all communication cables are inserted properly",req:"Should be work properly",freq:"M"},
+{sr:7,check:"All cable entry glands and spare glands should be closed",req:"Hole Sealing should be done",freq:"M"},
+{sr:8,check:"Check the all terminal are tighted",req:"No loose connection",freq:"M"},
+{sr:9,check:"Check the Door sensor light working status",req:"Should be work properly",freq:"M"},
+{sr:10,check:"Ensure Necessary Ventilation system working properly",req:"Should be work properly",freq:"M"},
+{sr:11,check:"Clean the panel (Ensure no dust remains inside panel)",req:"Cleaned",freq:"M"},
+{sr:12,check:"Ensure no communication loss in Ring main (Block to Block)",req:"Should be work properly",freq:"M"}
+],
+UPS_BATTERIES:[
+{sr:1,check:"Check UPS enclosure damage",req:"No damage",freq:"HY"},
+{sr:2,check:"Ensure UPS and batteries clean condition",req:"Should be cleaned",freq:"HY"},
+{sr:3,check:"Check UPS operational status",req:"Working healthy",freq:"HY"},
+{sr:4,check:"Check abnormal UPS noise",req:"No abnormal noise",freq:"HY"},
+{sr:5,check:"Check cable connections",req:"No loose",freq:"HY"},
+{sr:6,check:"Check grounding cables",req:"Should be grounded",freq:"HY"},
+{sr:7,check:"Check cable glands sealing",req:"Should be sealed",freq:"HY"},
+{sr:8,check:"Battery testing with tester",req:"Testing required",freq:"HY"},
+{sr:9,check:"Check UPS foundation",req:"No damage",freq:"HY"},
+{sr:10,check:"Check exhaust fan",req:"Working",freq:"HY"},
+{sr:11,check:"Total Battery Volatage",req:"in Volts",freq:"HY"}
+],
+NCU:[
+{sr:1,check:"Check the appearance of the NCU for damage or deformation.",req:"No damage",freq:"A"},
+{sr:2,check:"Check for dust and dint in the NCU box.",req:"Should be Cleaned",freq:"A"},
+{sr:3,check:"Check whether all equipment in the NCU box is operating normally.",req:"Should be working fine and Healthy",freq:"HY"},
+{sr:4,check:"Listen for abnormal sounds during the operation of the NCU box.",req:"No abnormal Noise",freq:"HY"},
+{sr:5,check:"Check whether the cable connection is detached or loose.",req:"No loose",freq:"HY"},
+{sr:6,check:"Check whether the cable is damaged, and focus on checking whether the surface of the cable that contacts the metal surface has signs of cuts.",req:"No damaged",freq:"HY"},
+{sr:7,check:"Check whether the plug of the unused waterproof connector is inserted",req:"Should be Plugged",freq:"HY"},
+{sr:8,check:"Check whether all the ground cables are reliably grounded",req:"Should be Grounded",freq:"HY"},
+{sr:9,check:"calibrate the torque of all the screws in the combiner box",req:"Retorque all the bolt",freq:"HY"},
+{sr:10,check:"Perform the thermography of PLC board",req:"Perform the Thermography",freq:"A"},
+{sr:11,check:"Anemometer wind signals",req:"No malfunction",freq:"HY"},
+{sr:12,check:"Check the foundation of NCU structure mounting",req:"No crack or damage",freq:"A"},
+{sr:13,check:"The correct operation of the different wind alarms and the thresholds specified on each project, Shall be checked",req:"It will be verified that all the trackers move to the specified position for each and every alarm.",freq:"HY"}
+],
+PV_FIELD_LA:[
+{sr:1,check:"Record the Earth Resistance value for all Grounding system",req:"Testing required",freq:"Y"},
+{sr:2,check:"Record the LA counter",req:"Record need to maintain",freq:"HY"},
+{sr:3,check:"Need to be LA pole rust free and no damage",req:"No damage or rust",freq:"Y"},
+{sr:4,check:"Check earthing pit chamber is damage free",req:"No damage",freq:"HY"},
+{sr:5,check:"Clean inside the earthing box if any dust or sand available",req:"Should be clean",freq:"HY"},
+{sr:6,check:"Check the tightness of earthing bolts connected to grid and pole",req:"Need to check",freq:"HY"},
+{sr:7,check:"Check the ERT marking & value should be visible",req:"Need to be visible",freq:"HY"}
+],
+EARTH_PITS:[
+{sr:1,check:"Check the Healthyness of Chamber",req:"No Damage",freq:"A"},
+{sr:2,check:"Check the healthyness of Chamber cover",req:"No Damage",freq:"A"},
+{sr:3,check:"Check the nomenclature details",req:"Clear and Visible",freq:"A"},
+{sr:4,check:"Check the Connection for tightness",req:"Tightened",freq:"A"},
+{sr:5,check:"Check the cleaning of pit",req:"Cleaned",freq:"A"},
+{sr:6,check:"Check electrode and nut bolt for corrosion",req:"No Corrosion",freq:"A"}
+],
+PD_BOX:[
+{sr:1,check:"Visual inspection of PD Box enclosure",req:"No damage or rust",freq:"HY"},
+{sr:2,check:"Check PD Box door locking",req:"Door should close properly",freq:"HY"},
+{sr:3,check:"Check auxiliary AC supply availability",req:"Supply should be available",freq:"HY"},
+{sr:4,check:"Check MCB/MCCB protection devices",req:"Working properly",freq:"HY"},
+{sr:5,check:"Check cable termination tightness",req:"No loose connection",freq:"HY"},
+{sr:6,check:"Check control wiring arrangement",req:"Proper routing",freq:"HY"},
+{sr:7,check:"Check PD Box earthing",req:"Properly grounded",freq:"HY"},
+{sr:8,check:"Check inverter-RMU interlocking key exchanger",req:"Interlock working",freq:"HY"},
+{sr:9,check:"Check auxiliary relays",req:"Working properly",freq:"HY"},
+{sr:10,check:"Check indicator lamps",req:"Working properly",freq:"HY"},
+{sr:11,check:"Check cable gland sealing",req:"Proper sealing",freq:"HY"},
+{sr:12,check:"Clean internal area of PD Box",req:"Panel should be clean",freq:"HY"},
+{sr:13,check:"Verify warning labels visibility",req:"Labels visible",freq:"HY"}
+],
+DCB:[
+{sr:1,check:"Check the appearance of the combiner box for damage or deformation.",req:"No damage",freq:"A"},
+{sr:2,check:"Check for dust and dirt in the combiner box.",req:"Should be Cleaned",freq:"A"},
+{sr:3,check:"Check whether all equipment in the combiner box is operating normally.",req:"Should be working fine and Healthy",freq:"HY"},
+{sr:4,check:"Listen for abnormal sounds during the operation of the combiner box.",req:"No abnormal Noise",freq:"HY"},
+{sr:5,check:"Check whether the cable connection is detached or loose.",req:"No loose",freq:"HY"},
+{sr:6,check:"Check whether the cable is damaged, and focus on checking whether the surface of the cable that contacts the metal surface has signs of cuts.",req:"No damaged",freq:"HY"},
+{sr:7,check:"Check whether the plug of the unused (spare) waterproof connector is inserted properly and the locking cap is tightened.",req:"Should be Plugged",freq:"HY"},
+{sr:8,check:"Check whether all the ground cables are reliably grounded.",req:"Should be Grounded",freq:"HY"},
+{sr:9,check:"Calibrate the torque of all the screws in the combiner box.",req:"Retorque all the bolt",freq:"HY"},
+{sr:10,check:"Check the healthiness of Installed fuse.",req:"Should be working fine and Healthy",freq:"Q"},
+{sr:11,check:"Perform the thermography.",req:"Perform the Thermography",freq:"A"},
+{sr:12,check:"Check the healthiness of SPD.",req:"Should be work properly",freq:"A"},
+{sr:13,check:"Check the communication board.",req:"Should be work properly",freq:"A"},
+{sr:14,check:"Check the antenna properly fixed.",req:"No damage",freq:"A"},
+{sr:15,check:"Check the cable glands properly closed.",req:"Should be seal properly",freq:"A"},
+{sr:16,check:"Perform insulation resistance test for DC cable.",req:"IR test for DC cable",freq:"A"}
+]
+};
+
+// Equipment list
+const equipmentList = [
+"IDT","RMU","RIO PANEL","UPS & BATTERIES",
+"INVERTERs",
+"INV-01-DCBs","INV-02-DCBs","INV-03-DCBs","INV-04-DCBs","INV-05-DCBs","INV-06-DCBs","INV-07-DCBs","INV-08-DCBs",
+"NCU","PD BOX","PV FIELD LA","EARTH PITS"
+];
+
+// ================================================================
+// FREQUENCY FILTER STATE
+// ================================================================
+var _activeFreq = "ALL";  // current active filter
+
+// Set active freq filter pill and apply filter to rows
+function setFreqFilter(freq){
+  _activeFreq = freq;
+  // Update pill active states
+  document.querySelectorAll(".freq-filter-pill").forEach(function(pill){
+    pill.classList.remove("active");
+    if(pill.dataset.freq === freq) pill.classList.add("active");
+  });
+  applyFreqFilter();
+  saveDraft();
+}
+
+// Show/hide checklist rows based on active filter
+function applyFreqFilter(){
+  var allRows = document.querySelectorAll("#checklistBody tr[data-freq]");
+  var visibleCount = 0;
+  var totalCount = allRows.length;
+  allRows.forEach(function(tr){
+    var rowFreq = tr.dataset.freq;
+    if(_activeFreq === "ALL" || rowFreq === _activeFreq){
+      tr.classList.remove("freq-hidden");
+      visibleCount++;
+    } else {
+      tr.classList.add("freq-hidden");
+    }
+  });
+  // Update info text
+  var infoEl = document.getElementById("freqFilterInfo");
+  if(infoEl){
+    if(_activeFreq === "ALL"){
+      infoEl.innerHTML = "Showing <strong>all " + totalCount + "</strong> checkpoints";
+    } else {
+      var freqLabel = {M:"Monthly",Q:"Quarterly",HY:"Half-Yearly",Y:"Yearly",A:"Annual",H:"Half-Yearly (Alt)"}[_activeFreq] || _activeFreq;
+      infoEl.innerHTML = "Showing <strong>" + visibleCount + " of " + totalCount + "</strong> checkpoints &mdash; " + freqLabel + " (" + _activeFreq + ") only";
+    }
+  }
+  // Also grey-out filter bar if no rows match
+  document.querySelectorAll(".freq-filter-pill[data-freq]").forEach(function(pill){
+    var f = pill.dataset.freq;
+    if(f === "ALL") return;
+    var countEl = document.getElementById("cnt-"+f);
+    if(countEl && parseInt(countEl.textContent) === 0){
+      pill.style.opacity = "0.4";
+      pill.style.cursor = "default";
+    } else {
+      pill.style.opacity = "";
+      pill.style.cursor = "pointer";
+    }
+  });
+}
+
+// Count rows by freq and update badges
+function updateFreqCounts(){
+  var counts = {ALL:0};
+  document.querySelectorAll("#checklistBody tr[data-freq]").forEach(function(tr){
+    var f = tr.dataset.freq;
+    counts.ALL++;
+    counts[f] = (counts[f]||0) + 1;
+  });
+  Object.keys(counts).forEach(function(f){
+    var el = document.getElementById("cnt-"+f);
+    if(el) el.textContent = counts[f] || 0;
+  });
+  // Zero out any freq not present
+  ["M","Q","HY","Y","A","H"].forEach(function(f){
+    if(!counts[f]){
+      var el = document.getElementById("cnt-"+f);
+      if(el) el.textContent = "0";
+    }
+  });
+  // Hide pills that have 0 count (except ALL)
+  ["M","Q","HY","Y","A","H"].forEach(function(f){
+    var pill = document.querySelector(".freq-filter-pill[data-freq='"+f+"']");
+    if(pill){
+      pill.style.display = (counts[f] && counts[f] > 0) ? "" : "none";
+    }
+  });
+}
+
+// ================================================================
+// INIT
+// ================================================================
+window.onload = function(){
+  var eq = document.getElementById("equipmentSelect");
+  equipmentList.forEach(function(e){
+    var opt = document.createElement("option");
+    opt.text = e; eq.add(opt);
+  });
+  updateMVPS();
+  document.getElementById("plannedDate").valueAsDate = new Date();
+
+  var draft = restoreDraft();
+  if(draft){
+    if(draft["phase"]){ document.getElementById("phase").value = draft["phase"]; updateMVPS(); }
+    if(draft["mvps"]){ document.getElementById("mvps").value = draft["mvps"]; }
+    if(draft["_activeFreq"]){ _activeFreq = draft["_activeFreq"]; }
+    if(draft["equipmentSelect"]){
+      document.getElementById("equipmentSelect").value = draft["equipmentSelect"];
+      loadChecklist();
+      setTimeout(function(){ restoreDraftChecklist(draft); }, 80);
+    }
+    showStatus("Draft restored from your last session.", "info");
+    setTimeout(function(){ document.getElementById("statusBar").className="status-bar"; }, 4000);
+  }
+
+  ["mo","ptw","equipSr","equipId","freq","plannedDate","startTime","finishTime",
+   "phase","mvps","maintIncharge","position","reviewer","tech","submitBy","reviewBy"
+  ].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){ el.addEventListener("change", saveDraft); el.addEventListener("input", saveDraft); }
+  });
+};
+
+// ================================================================
+// MVPS UPDATE
+// ================================================================
+function updateMVPS(){
+  var phase = document.getElementById("phase").value;
+  var mvps = document.getElementById("mvps");
+  mvps.innerHTML = "";
+  var max = 72;
+  if(phase==="B") max=48;
+  if(phase==="C") max=96;
+  for(var i=1;i<=max;i++){
+    var opt = document.createElement("option");
+    opt.text = i.toString().padStart(2,"0");
+    mvps.add(opt);
+  }
+}
+
+// ================================================================
+// LOAD CHECKLIST
+// ================================================================
+function loadChecklist(){
+  var eq = document.getElementById("equipmentSelect").value;
+  document.getElementById("checklistTitle").textContent = eq + " — Preventive Maintenance Checklist";
+
+  // Reset freq filter to ALL on new equipment load
+  _activeFreq = "ALL";
+  document.querySelectorAll(".freq-filter-pill").forEach(function(p){
+    p.classList.remove("active");
+    if(p.dataset.freq === "ALL") p.classList.add("active");
+  });
+
+  // map type
+  var type = eq;
+  if(type.includes("INVERTER") && !type.includes("DCB")) type="INVERTER";
+  if(type.includes("DCB")) type="DCB";
+  if(type.includes("IDT")) type="IDT";
+  if(type.includes("RMU")) type="RMU";
+  if(type.includes("RIO")) type="RIO_PANEL";
+  if(type.includes("UPS")) type="UPS_BATTERIES";
+  if(type.includes("NCU")) type="NCU";
+  if(type.includes("PV FIELD LA")) type="PV_FIELD_LA";
+  if(type.includes("PD BOX") || type.includes("PD_BOX")) type="PD_BOX";
+  if(type.includes("EARTH PITS") || type.includes("EARTH_PITS")) type="EARTH_PITS";
+
+  var tbody = document.getElementById("checklistBody");
+  tbody.innerHTML = "";
+
+  var data = checklistDB[type];
+  if(!data){
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No checklist found for <strong>'+eq+'</strong>.</p></div></td></tr>';
+    document.getElementById("freqFilterBar").style.display = "none";
+    return;
+  }
+
+  // Show filter bar
+  document.getElementById("freqFilterBar").style.display = "flex";
+
+  var isDCB = (type === "DCB");
+  if(isDCB){
+    var thead = document.querySelector("#checklistTable thead tr");
+    thead.innerHTML = '<th style="width:46px">Sr</th><th>Check Point</th><th style="min-width:130px">Requirement</th><th style="width:60px;text-align:center">Freq</th><th style="min-width:80px;text-align:center">DCB-01<br><input class="dcb-serial-input" id="dcbSr1" placeholder="Sl.no" style="width:70px;font-size:11px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;margin-top:3px"></th><th style="min-width:80px;text-align:center">DCB-02<br><input class="dcb-serial-input" id="dcbSr2" placeholder="Sl.no" style="width:70px;font-size:11px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;margin-top:3px"></th><th style="min-width:80px;text-align:center">DCB-03<br><input class="dcb-serial-input" id="dcbSr3" placeholder="Sl.no" style="width:70px;font-size:11px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;margin-top:3px"></th><th style="min-width:80px;text-align:center">DCB-04<br><input class="dcb-serial-input" id="dcbSr4" placeholder="Sl.no" style="width:70px;font-size:11px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;margin-top:3px"></th><th style="min-width:80px;text-align:center">DCB-05<br><input class="dcb-serial-input" id="dcbSr5" placeholder="Sl.no" style="width:70px;font-size:11px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;margin-top:3px"></th><th style="min-width:180px">Remarks</th>';
+
+    function dcbOpts(req){
+      var r = req.toLowerCase();
+      var opts;
+      if(r.includes("no damage")||r.includes("no damaged")) opts=["","OK - No Damage","Damage Found","NA"];
+      else if(r.includes("clean")) opts=["","Cleaned","Dusty / Not Cleaned","NA"];
+      else if(r.includes("noise")) opts=["","No Abnormal Noise","Abnormal Noise Found","NA"];
+      else if(r.includes("loose")) opts=["","No Loose Connection","Loose Connection Found","NA"];
+      else if(r.includes("plug")) opts=["","Plugged","Not Plugged","NA"];
+      else if(r.includes("ground")) opts=["","Grounded","Not Grounded / Open","NA"];
+      else if(r.includes("retorque")||r.includes("torque")) opts=["","Done","Pending","NA"];
+      else if(r.includes("thermograph")) opts=["","Done","Not Done","NA"];
+      else if(r.includes("seal")) opts=["","Sealed","Not Sealed","NA"];
+      else if(r.includes("ir test")) opts=["","Done - Pass","Done - Fail","Not Done","NA"];
+      else if(r.includes("work properly")||r.includes("working fine")||r.includes("healthy")) opts=["","Working Fine","Fault Found","NA"];
+      else opts=["","OK","Not OK","NA"];
+      return opts.map(function(o){return '<option value="'+o+'">'+(o||"-- Select --")+'</option>';}).join("");
+    }
+    var dcbSelStyle = "width:100%;min-width:90px;height:32px;border:1.5px solid #cbd5e1;border-radius:5px;font-size:11px;background:#fff;color:#0a1628;padding:0 4px;cursor:pointer;appearance:auto";
+    data.forEach(function(item){
+      var opts = dcbOpts(item.req);
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-freq", item.freq);  // ← FREQ DATA ATTR for filter
+      tr.innerHTML = '<td class="sr-cell">'+item.sr+'</td><td class="check-cell">'+item.check+'</td><td class="req-cell">'+item.req+'</td><td class="freq-cell"><span class="freq-badge '+item.freq+'">'+item.freq+'</span></td><td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="'+item.sr+'" data-dcb="1" style="'+dcbSelStyle+'" onchange="saveDraft()">'+opts+'</select></td><td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="'+item.sr+'" data-dcb="2" style="'+dcbSelStyle+'" onchange="saveDraft()">'+opts+'</select></td><td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="'+item.sr+'" data-dcb="3" style="'+dcbSelStyle+'" onchange="saveDraft()">'+opts+'</select></td><td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="'+item.sr+'" data-dcb="4" style="'+dcbSelStyle+'" onchange="saveDraft()">'+opts+'</select></td><td style="text-align:center;min-width:100px;padding:6px 4px"><select class="dcb-cell dcb-select" data-row="'+item.sr+'" data-dcb="5" style="'+dcbSelStyle+'" onchange="saveDraft()">'+opts+'</select></td><td class="remark-cell"><textarea class="remark-input" placeholder="Overall remarks..." oninput="autoResize(this);saveDraft()"></textarea></td>';
+      tbody.appendChild(tr);
+    });
+  } else {
+    // Restore default headers
+    var thead = document.querySelector("#checklistTable thead tr");
+    thead.innerHTML = '<th style="width:50px">Sr</th><th>Check Point</th><th style="min-width:160px">Requirement</th><th style="width:70px;text-align:center">Freq</th><th style="min-width:220px">Remarks / Findings</th>';
+    data.forEach(function(item){
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-freq", item.freq);  // ← FREQ DATA ATTR for filter
+      tr.innerHTML = '<td class="sr-cell">'+item.sr+'</td><td class="check-cell">'+item.check+'</td><td class="req-cell">'+item.req+'</td><td class="freq-cell"><span class="freq-badge '+item.freq+'">'+item.freq+'</span></td><td class="remark-cell"><textarea class="remark-input" placeholder="Enter findings / remarks..." oninput="autoResize(this);saveDraft()"></textarea></td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Update freq counts and apply current filter
+  updateFreqCounts();
+  applyFreqFilter();
+
+  // Battery / ERT section
+  var battSection = document.getElementById("batterySection");
+  battSection.innerHTML = "";
+  if(type === "UPS_BATTERIES"){
+    battSection.innerHTML = '<div style="padding:20px 24px"><div class="battery-section"><h3>Battery Voltage Measurements</h3><div style="overflow-x:auto"><table class="battery-table" style="margin-bottom:14px"><tr><th>Battery</th><th>B-1</th><th>B-2</th><th>B-3</th><th>B-4</th><th>B-5</th><th>B-6</th><th>B-7</th><th>B-8</th></tr><tr><td>Volts</td>'+[1,2,3,4,5,6,7,8].map(function(){return '<td><input class="battery-input" type="number" step="0.01" placeholder="0.00"></td>';}).join("")+'</tr></table><table class="battery-table"><tr><th>Battery</th><th>B-9</th><th>B-10</th><th>B-11</th><th>B-12</th><th>B-13</th><th>B-14</th><th>B-15</th><th>B-16</th></tr><tr><td>Volts</td>'+[9,10,11,12,13,14,15,16].map(function(){return '<td><input class="battery-input" type="number" step="0.01" placeholder="0.00"></td>';}).join("")+'</tr></table></div></div></div>';
+  }
+  if(type === "EARTH_PITS"){
+    battSection.innerHTML = '<div style="padding:20px 24px"><div class="battery-section"><h3>ERT Values</h3><div style="overflow-x:auto"><table class="battery-table" id="ertTable"><thead><tr><th>Ep No</th><th>EEp-01</th><th>EEp-02</th><th>Ep-01</th><th>Ep-02</th><th>Ep-03</th><th>Ep-04</th><th>LA-EP-01</th><th>LA-EP-02</th><th>LA-EP-03</th></tr></thead><tbody><tr><td style="font-weight:600;background:#f0f4ff;color:var(--navy);width:100px">Value (ohm)</td>'+["EEp-01","EEp-02","Ep-01","Ep-02","Ep-03","Ep-04","LA-EP-01","LA-EP-02","LA-EP-03"].map(function(id){return '<td><input class="battery-input ert-input" data-ep="'+id+'" type="number" step="0.01" placeholder="0.00" style="width:80px"></td>';}).join("")+'</tr></tbody></table></div></div></div>';
+  }
+}
+
+// auto-resize textareas
+function autoResize(el){
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 200) + "px";
+}
+
+// ================================================================
+// SIGNATURE HANDLER
+// ================================================================
+function handleSignature(input, previewId, labelId){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var preview = document.getElementById(previewId);
+    preview.src = e.target.result;
+    preview.classList.add("visible");
+    var label = document.getElementById(labelId);
+    label.innerHTML = '<div style="color:var(--green);font-size:11px;font-weight:600">&#x2713; '+file.name+'</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Click to change</div>';
+    preview.dataset.b64 = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ================================================================
+// STATUS BAR
+// ================================================================
+function showStatus(msg, type){
+  type = type || "info";
+  var bar = document.getElementById("statusBar");
+  bar.textContent = msg;
+  bar.className = "status-bar visible " + type;
+  if(type === "success") setTimeout(function(){bar.className="status-bar";},4000);
+}
+
+// ================================================================
+// FILENAME DATE HELPER
+// ================================================================
+function fileDateStr(){
+  var d = new Date();
+  var dd = String(d.getDate()).padStart(2,"0");
+  var mm = String(d.getMonth()+1).padStart(2,"0");
+  var yyyy = d.getFullYear();
+  return dd+"-"+mm+"-"+yyyy;
+}
+
+// ================================================================
+// SAFE STRING
+// ================================================================
+function safeStr(v){
+  if(v===null||v===undefined) return "";
+  return String(v).replace(/\u2014/g,"-").replace(/\u2013/g,"-")
+    .replace(/\u2018|\u2019/g,"'").replace(/\u201c|\u201d/g,'"').trim();
+}
+
+// ================================================================
+// COLLECT FORM DATA — only VISIBLE (non-filtered) rows
+// ================================================================
+function collectFormData(){
+  var rows = [];
+  document.querySelectorAll("#checklistBody tr[data-freq]").forEach(function(tr){
+    if(tr.classList.contains("freq-hidden")) return;  // ← skip filtered-out rows
+    var tds = tr.querySelectorAll("td");
+    if(tds.length < 5) return;
+    if(tds.length >= 8) return; // skip DCB rows
+    rows.push({
+      sr:     safeStr(tds[0].textContent),
+      check:  safeStr(tds[1].textContent),
+      req:    safeStr(tds[2].textContent),
+      freq:   safeStr(tds[3].querySelector(".freq-badge") ? tds[3].querySelector(".freq-badge").textContent : tds[3].textContent),
+      remark: safeStr(tds[4].querySelector("textarea") ? tds[4].querySelector("textarea").value : "")
+    });
+  });
+  return rows;
+}
+
+// ================================================================
+// COLLECT DCB DATA — only VISIBLE (non-filtered) rows
+// ================================================================
+function collectDCBData(){
+  var allTrs = document.querySelectorAll("#checklistBody tr[data-freq]");
+  if(!allTrs.length) return null;
+  var firstTds = allTrs[0] ? allTrs[0].querySelectorAll("td") : [];
+  if(firstTds.length < 8) return null;
+
+  var serials = [1,2,3,4,5].map(function(i){
+    var el = document.getElementById("dcbSr"+i);
+    return el ? safeStr(el.value)||("DCB-0"+i) : ("DCB-0"+i);
+  });
+
+  var rows = [];
+  allTrs.forEach(function(tr){
+    if(tr.classList.contains("freq-hidden")) return;  // ← skip filtered-out rows
+    var tds = tr.querySelectorAll("td");
+    if(tds.length < 9) return;
+    var dcbVals = [];
+    for(var c=4;c<=8;c++){
+      var sel = tds[c].querySelector("select");
+      var ta  = tds[c].querySelector("textarea");
+      dcbVals.push(safeStr(sel ? sel.value : (ta ? ta.value : "")));
+    }
+    var remarkTa = tds[9] ? tds[9].querySelector("textarea") : null;
+    rows.push({
+      sr:    safeStr(tds[0].textContent),
+      check: safeStr(tds[1].textContent),
+      req:   safeStr(tds[2].textContent),
+      freq:  safeStr(tds[3].querySelector(".freq-badge")?tds[3].querySelector(".freq-badge").textContent:tds[3].textContent),
+      dcb:   dcbVals,
+      remark:remarkTa?safeStr(remarkTa.value):""
+    });
+  });
+  return {serials:serials, rows:rows};
+}
+
+// ================================================================
+// COLLECT BATTERY DATA
+// ================================================================
+function collectBatteryData(){
+  var battSection = document.getElementById("batterySection");
+  if(!battSection||!battSection.innerHTML.trim()) return null;
+  var inputs = battSection.querySelectorAll("input.battery-input");
+  if(!inputs.length) return null;
+  var vals = Array.from(inputs).map(function(i){ return safeStr(i.value)||""; });
+  return { row1: vals.slice(0,8), row2: vals.slice(8,16) };
+}
+
+// ================================================================
+// COLLECT ERT DATA
+// ================================================================
+function collectERTData(){
+  var battSection = document.getElementById("batterySection");
+  if(!battSection||!battSection.innerHTML.trim()) return null;
+  var inputs = battSection.querySelectorAll("input.ert-input");
+  if(!inputs.length) return null;
+  var labels = ["EEp-01","EEp-02","Ep-01","Ep-02","Ep-03","Ep-04","LA-EP-01","LA-EP-02","LA-EP-03"];
+  var vals = Array.from(inputs).map(function(i){ return safeStr(i.value)||""; });
+  var remarksEl = document.getElementById("ertRemarks");
+  var remarks = remarksEl ? safeStr(remarksEl.value) : "";
+  return { labels: labels, vals: vals, remarks: remarks };
+}
+
+// ================================================================
+// ACTIVE FILTER LABEL — for PDF/Excel header
+// ================================================================
+function activeFilterLabel(){
+  if(_activeFreq === "ALL") return "All Frequencies";
+  var map = {M:"Monthly (M)",Q:"Quarterly (Q)",HY:"Half-Yearly (HY)",Y:"Yearly (Y)",A:"Annual (A)",H:"Half-Yearly Alt (H)"};
+  return (map[_activeFreq] || _activeFreq) + " only";
+}
+
+// ================================================================
+// GENERATE EXCEL
+// ================================================================
+function generateExcel(){
+  var rows = collectFormData();
+  var dcbCheck = collectDCBData();
+  var hasRows = rows.length > 0 || (dcbCheck && dcbCheck.rows && dcbCheck.rows.length > 0);
+  if(!hasRows){ showStatus("Please load a checklist first (or check your frequency filter — no rows visible).","error"); return; }
+  showOverlay("Building export…");
+
+  var phase   = safeStr(document.getElementById("phase").value);
+  var mvps    = safeStr(document.getElementById("mvps").value);
+  var eq      = safeStr(document.getElementById("equipmentSelect").value);
+  var equipId = safeStr(document.getElementById("equipId").value);
+  var mo      = safeStr(document.getElementById("mo").value);
+  var ptw     = safeStr(document.getElementById("ptw").value);
+  var date    = safeStr(document.getElementById("plannedDate").value);
+  var freq    = safeStr(document.getElementById("freq").value);
+  var maintIC = safeStr(document.getElementById("maintIncharge").value);
+  var pos     = safeStr(document.getElementById("position").value);
+  var rev     = safeStr(document.getElementById("reviewer").value);
+  var tech    = safeStr(document.getElementById("tech").value);
+  var submit  = safeStr(document.getElementById("submitBy").value);
+  var revBy   = safeStr(document.getElementById("reviewBy").value);
+  var equipSr = safeStr(document.getElementById("equipSr").value);
+  var startTm = safeStr(document.getElementById("startTime").value);
+  var finTm   = safeStr(document.getElementById("finishTime").value);
+  var battData = collectBatteryData();
+  var ertData  = collectERTData();
+  var safeEq   = eq.replace(/[^a-zA-Z0-9_-]/g,"_");
+  var filterLabel = activeFilterLabel();
+
+  var D = [];
+  D.push(["MBRSP-DEWA VI - 1800MW Solar PV Power Plant","","","","",""]);
+  D.push([eq+" - Preventive Maintenance Checklist","","","","",""]);
+  D.push(["Frequency Filter Applied: "+filterLabel,"","","","",""]);
+  D.push([""]);
+  D.push(["Plant","DEWA-VI","MO No.",mo||"-","PTW No.",ptw||"-"]);
+  D.push(["Phase",phase,"MVPS No.",mvps,"Equipment",eq]);
+  D.push(["Equip. Sr No.",equipSr||"-","Equipment ID",equipId||"-","Frequency",freq||"-"]);
+  D.push(["Planned Date",date||"-","Start Time",startTm||"-","Finish Time",finTm||"-"]);
+  D.push(["Maint. In-Charge",maintIC,"Position",pos,"Reviewed By",rev]);
+  D.push([""]);
+  D.push(["Sr No","Check Point","Requirement","Frequency","Remarks / Findings","Status"]);
+  rows.forEach(function(r){
+    var remark = safeStr(r.remark);
+    var status = "";
+    if(remark){ var rl=remark.toLowerCase(); status=rl.includes("ok")||rl.includes("good")||rl.includes("clean")?"OK":rl.includes("not")||rl.includes("fail")||rl.includes("damage")?"NOT OK":"Done"; }
+    D.push([safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq),remark,status]);
+  });
+  var isEarthPits = eq.toUpperCase().includes("EARTH");
+  if(battData && !isEarthPits){
+    D.push([""],["BATTERY VOLTAGE MEASUREMENTS"]);
+    D.push(["Battery","B-1","B-2","B-3","B-4","B-5","B-6","B-7","B-8",""]);
+    D.push(["Volts"].concat(battData.row1).concat([""]));
+    D.push(["Battery","B-9","B-10","B-11","B-12","B-13","B-14","B-15","B-16",""]);
+    D.push(["Volts"].concat(battData.row2).concat([""]));
+  }
+  if(ertData){
+    D.push([""],["ERT VALUES (Ohm)"]);
+    D.push(["Ep No"].concat(ertData.labels));
+    D.push(["Value (ohm)"].concat(ertData.vals));
+    if(ertData.remarks) D.push(["Remarks",ertData.remarks]);
+  }
+  var overallRem = safeStr((document.getElementById("overallRemarks")||{}).value||"");
+  if(overallRem){ D.push([""],[" OVERALL REMARKS"],[overallRem]); }
+  D.push([""],["AUTHORISATION & SIGNATURES"],["Performed By (Technician)",tech],["Submitted By",submit],["Reviewed By",revBy],[""],["Report Generated:",new Date().toLocaleString()]);
+
+  var importHeaders = ["Area Name","Equip / No","Planned Date","Actual Date","Freq Filter"];
+  rows.forEach(function(r){ importHeaders.push("Item "+r.sr+": "+safeStr(r.check).substring(0,28)); });
+  importHeaders.push("Checked By","Reviewed By");
+  var importRow = [eq,equipId,date,"",filterLabel];
+  rows.forEach(function(r){ importRow.push(safeStr(r.remark)||""); });
+  importRow.push(maintIC,rev);
+
+  // DCB special export
+  var dcbExportData = collectDCBData();
+  if(dcbExportData && dcbExportData.rows.length > 0){
+    var dcbHeaders = ["Sr No","Check Point","Requirement","Frequency"].concat(dcbExportData.serials).concat(["Remarks"]);
+    var dcbDataRows = dcbExportData.rows.map(function(r){
+      return [safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq)].concat(r.dcb.map(safeStr)).concat([safeStr(r.remark)]);
+    });
+    var dcbImpHeaders = ["Area Name","Equipment ID","Planned Date","Actual Date","Freq Filter"];
+    dcbExportData.rows.forEach(function(r){ dcbImpHeaders.push("Item "+safeStr(r.sr)+": "+safeStr(r.check).substring(0,28)); });
+    dcbImpHeaders.push("Checked By","Reviewed By","Overall Remarks");
+    var dcbImpRow = [eq, equipId||"-", date||"-", "", filterLabel];
+    dcbExportData.rows.forEach(function(r){ dcbImpRow.push(r.dcb.map(safeStr).filter(Boolean).join(" | ")||""); });
+    dcbImpRow.push(maintIC, rev, overallRem);
+    function p10(a){ var r=a.slice(); while(r.length<10) r.push(""); return r; }
+    var D_dcb = [];
+    D_dcb.push(p10(["MBRSP-DEWA VI - 1800MW Solar PV Power Plant"]));
+    D_dcb.push(p10([eq+" - Preventive Maintenance Checklist"]));
+    D_dcb.push(p10(["Frequency Filter: "+filterLabel]));
+    D_dcb.push(p10([]));
+    D_dcb.push(p10(["Plant","DEWA-VI","MO No.",mo||"-","PTW No.",ptw||"-"]));
+    D_dcb.push(p10(["Phase",phase,"MVPS No.",mvps,"Equipment",eq]));
+    D_dcb.push(p10(["Equip. Sr No.",equipSr||"-","Equipment ID",equipId||"-","Frequency",freq||"-"]));
+    D_dcb.push(p10(["Planned Date",date||"-","Start Time",startTm||"-","Finish Time",finTm||"-"]));
+    D_dcb.push(p10(["Maint. In-Charge",maintIC,"Position",pos,"Reviewed By",rev]));
+    D_dcb.push(p10([]));
+    D_dcb.push(p10(dcbHeaders));
+    dcbDataRows.forEach(function(r){ D_dcb.push(p10(r)); });
+    if(overallRem){ D_dcb.push(p10([])); D_dcb.push(p10(["OVERALL REMARKS"])); D_dcb.push(p10(["",overallRem])); }
+    D_dcb.push(p10([])); D_dcb.push(p10(["AUTHORISATION"]));
+    D_dcb.push(p10(["Performed By",tech])); D_dcb.push(p10(["Submitted By",submit])); D_dcb.push(p10(["Reviewed By",revBy]));
+    D_dcb.push(p10([])); D_dcb.push(p10(["Generated:",new Date().toLocaleString()]));
+    if(typeof XLSX !== "undefined"){
+      try{
+        var wb2 = XLSX.utils.book_new();
+        var ws1b = XLSX.utils.aoa_to_sheet(D_dcb);
+        ws1b["!cols"] = [{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
+        ws1b["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:D_dcb.length-1,c:9}});
+        XLSX.utils.book_append_sheet(wb2,"PM Checklist",ws1b);
+        var dcbOnlyRows = [p10(dcbHeaders)].concat(dcbDataRows.map(p10));
+        var wsDCB2 = XLSX.utils.aoa_to_sheet(dcbOnlyRows);
+        wsDCB2["!cols"] = [{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
+        wsDCB2["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:dcbOnlyRows.length-1,c:9}});
+        XLSX.utils.book_append_sheet(wb2,"DCB Data",wsDCB2);
+        var wsImp2 = XLSX.utils.aoa_to_sheet([dcbImpHeaders,dcbImpRow]);
+        wsImp2["!cols"] = dcbImpHeaders.map(function(_,i){ return {wch:i<5?18:24}; });
+        XLSX.utils.book_append_sheet(wb2,"Data Import",wsImp2);
+        var fn2 = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+fileDateStr()+(_activeFreq!=="ALL"?"_Freq-"+_activeFreq:"")+".xlsx";
+        XLSX.writeFile(wb2,fn2);
+        showStatus("Excel exported (DCB, filter: "+filterLabel+"): "+fn2, "success");
+        hideOverlay(); return;
+      }catch(e2){
+        showStatus("DCB Excel export failed: "+e2.message,"error");
+        hideOverlay(); return;
+      }
+    }
+  }
+
+  var xlsxOk = false;
+  try {
+    if(typeof XLSX !== "undefined"){
+      var wb = XLSX.utils.book_new();
+      var ws1 = XLSX.utils.aoa_to_sheet(D);
+      ws1["!cols"] = [{wch:18},{wch:50},{wch:36},{wch:12},{wch:40},{wch:10}];
+      ws1["!merges"] = [{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+      XLSX.utils.book_append_sheet(wb,"PM Checklist",ws1);
+      var ws2 = XLSX.utils.aoa_to_sheet([importHeaders, importRow]);
+      ws2["!cols"] = importHeaders.map(function(_,i){ return {wch:i<5?18:22}; });
+      XLSX.utils.book_append_sheet(wb,"Data Import",ws2);
+      var fn = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+fileDateStr()+(_activeFreq!=="ALL"?"_Freq-"+_activeFreq:"")+".xlsx";
+      XLSX.writeFile(wb, fn);
+      xlsxOk = true;
+      showStatus("Excel exported (filter: "+filterLabel+"): "+fn, "success");
+    }
+  } catch(e){ xlsxOk = false; }
+
+  if(!xlsxOk){
+    try {
+      function csvEscape(v){ var s=String(v==null?"":v).replace(/"/g,'""'); return /[",\n\r]/.test(s)?'"'+s+'"':s; }
+      var csvLines = D.map(function(row){ return row.map(csvEscape).join(","); }).join("\r\n");
+      var blob = new Blob(["\uFEFF"+csvLines], {type:"text/csv;charset=utf-8"});
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement("a");
+      a.href = url; a.download = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+fileDateStr()+".csv";
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+      showStatus("CSV exported (filter: "+filterLabel+")", "success");
+    } catch(e2){ showStatus("Export failed: "+e2.message, "error"); }
+  }
+  hideOverlay();
+}
+
+// ================================================================
+// PDF GENERATION
+// ================================================================
+async function generatePDF(){
+  var rows = collectFormData();
+  var dcbD = collectDCBData();
+  var hasData = rows.length > 0 || (dcbD && dcbD.rows.length > 0);
+  if(!hasData){showStatus("Please load a checklist first (or check your frequency filter — no rows visible).","error");return;}
+  showOverlay("Calculating layout…");
+  try {
+    var doc = await buildPDFDoc();
+    if(!doc){ showStatus("Could not build PDF.", "error"); hideOverlay(); return; }
+    var phase   = document.getElementById("phase").value;
+    var mvps    = document.getElementById("mvps").value;
+    var eq      = document.getElementById("equipmentSelect").value;
+    var equipId = document.getElementById("equipId").value;
+    var safeEq  = eq.replace(/[^a-zA-Z0-9_-]/g,"_");
+    var filename = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+fileDateStr()+(_activeFreq!=="ALL"?"_Freq-"+_activeFreq:"")+".pdf";
+    doc.save(filename);
+    showStatus("PDF saved (filter: "+activeFilterLabel()+"): "+filename, "success");
+    hideOverlay();
+  } catch(err2){
+    showStatus("PDF generation failed: "+err2.message, "error");
+    console.error(err2); hideOverlay();
+  }
+}
+
+// ================================================================
+// GENERATE ZIP
+// ================================================================
+async function generateZip(){
+  var rows = collectFormData();
+  var dcbData = collectDCBData();
+  var hasChecklist = rows.length > 0 || (dcbData && dcbData.rows.length > 0);
+  if(!hasChecklist){ showStatus("Please load a checklist first (or check your frequency filter).", "error"); return; }
+  if(typeof JSZip === "undefined"){ showStatus("JSZip library not loaded.", "error"); return; }
+  showOverlay("Building ZIP package…");
+  try {
+    var zip = new JSZip();
+    var phase   = safeStr(document.getElementById("phase").value);
+    var mvps    = safeStr(document.getElementById("mvps").value);
+    var eq      = safeStr(document.getElementById("equipmentSelect").value);
+    var equipId = safeStr(document.getElementById("equipId").value);
+    var safeEq  = eq.replace(/[^a-zA-Z0-9_-]/g,"_");
+    var dateStr = fileDateStr();
+    var freqSuffix = _activeFreq !== "ALL" ? "_Freq-"+_activeFreq : "";
+    var baseName = "PM_Checklist_Phase"+phase+"_MVPS"+mvps+"_"+safeEq+"_"+(equipId||"XX")+"_"+dateStr+freqSuffix;
+    try {
+      var pdfDoc = await buildPDFDoc();
+      if(pdfDoc){ zip.file(baseName+".pdf", pdfDoc.output("blob")); }
+    } catch(e){ console.warn("PDF in zip failed:", e); }
+    try {
+      if(typeof XLSX !== "undefined"){
+        var xlsxBlob = buildXLSXBlob();
+        if(xlsxBlob){ zip.file(baseName+".xlsx", xlsxBlob); }
+      }
+    } catch(e){ console.error("Excel in zip failed:", e.message); }
+    try {
+      var csvBlob = buildCSVBlob();
+      if(csvBlob) zip.file(baseName+"_DataImport.csv", csvBlob);
+    } catch(e){ console.warn("CSV in zip failed:", e); }
+    var zipBlob = await zip.generateAsync({type:"blob", compression:"DEFLATE", compressionOptions:{level:6}});
+    var url = URL.createObjectURL(zipBlob);
+    var a = document.createElement("a");
+    a.href = url; a.download = baseName+".zip";
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+    showStatus("ZIP downloaded: "+baseName+".zip (filter: "+activeFilterLabel()+")", "success");
+  } catch(err){
+    showStatus("ZIP generation failed: "+err.message, "error");
+    console.error(err);
+  }
+  hideOverlay();
+}
+
+// ================================================================
+// BUILD PDF DOC (shared)
+// ================================================================
+async function buildPDFDoc(){
+  var rows = collectFormData();
+  var dcbD = collectDCBData();
+  if(rows.length === 0 && (!dcbD || dcbD.rows.length === 0)) return null;
+  var { jsPDF } = window.jspdf;
+  var phase   = document.getElementById("phase").value;
+  var mvps    = document.getElementById("mvps").value;
+  var eq      = document.getElementById("equipmentSelect").value;
+  var equipId = document.getElementById("equipId").value||"-";
+  var mo      = document.getElementById("mo").value||"-";
+  var ptw     = document.getElementById("ptw").value||"-";
+  var date    = document.getElementById("plannedDate").value||"-";
+  var freq    = document.getElementById("freq").value||"-";
+  var maintIC = document.getElementById("maintIncharge").value;
+  var pos     = document.getElementById("position").value;
+  var rev     = document.getElementById("reviewer").value;
+  var tech    = document.getElementById("tech").value;
+  var submit  = document.getElementById("submitBy").value;
+  var revBy   = document.getElementById("reviewBy").value;
+  var techSig   = document.getElementById("techPreview").dataset.b64||null;
+  var submitSig = document.getElementById("submitPreview").dataset.b64||null;
+  var reviewSig = document.getElementById("reviewPreview").dataset.b64||null;
+  var overallRemarks = safeStr((document.getElementById("overallRemarks")||{}).value||"");
+  var filterLabel = activeFilterLabel();
+
+  var useDCB = dcbD && dcbD.rows.length > 0;
+  var orientation = useDCB ? "landscape" : "portrait";
+  var doc = new jsPDF({orientation:orientation, unit:"mm", format:"a4"});
+  var PW = useDCB ? 297 : 210, PH = useDCB ? 210 : 297;
+  var ML=8, MR=8, usableW=PW-ML-MR;
+  var headerH=24, footerH=7, sigH=22, gapH=2;
+
+  // Header
+  doc.setFillColor(255,255,255); doc.rect(0,0,PW,headerH,"F");
+  doc.setDrawColor(10,22,40); doc.setLineWidth(0.5); doc.rect(0,0,PW,headerH,"S");
+  doc.addImage(LOGO_B64,"PNG",ML,4,34,14,undefined,"FAST");
+  var logoBoxW = ML+34+6;
+  doc.setLineWidth(0.4); doc.line(logoBoxW, 0, logoBoxW, headerH);
+
+  var docRefMap = {"DCB":"MBRSP-MSTS-DEWA-VI-E-CLS-036-Rev-000","NCU":"MBRSP-MSTS-DEWA-VI-E-CLS-037-Rev-000","RMU":"MBRSP-MSTS-DEWA-VI-E-CLS-038-Rev-000","INVERTER":"MBRSP-MSTS-DEWA-VI-E-CLS-039-Rev-000","PV FIELD LA":"MBRSP-MSTS-DEWA-VI-E-CLS-049-Rev-000","EARTH PITS":"MBRSP-MSTS-DEWA-VI-E-CLS-062-Rev-000","RIO PANEL":"MBRSP-MSTS-DEWA-VI-E-CLS-105-Rev-000","UPS":"MBRSP-MSTS-DEWA-VI-E-CLS-106-Rev-000","IDT":"MBRSP-MSTS-DEWA-VI-E-CLS-104-Rev-000"};
+  var eqKey = eq.toUpperCase().trim();
+  var docRef = "";
+  for(var k in docRefMap){ if(eqKey.indexOf(k)!==-1){ docRef=docRefMap[k]; break; } }
+  var refBoxW=56, refBoxX=PW-refBoxW;
+  if(docRef){
+    doc.setLineWidth(0.4); doc.line(refBoxX,0,refBoxX,headerH);
+    doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(10,80,140);
+    doc.text(docRef, refBoxX+refBoxW/2, headerH/2+1, {align:"center", maxWidth:refBoxW-4});
+  }
+  var titleAreaX=logoBoxW, titleAreaW=(docRef?refBoxX:PW)-logoBoxW;
+  doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(10,22,40);
+  doc.text("MBRSP-DEWA VI - 1800MW Solar PV Power Plant", titleAreaX+titleAreaW/2, 10, {align:"center"});
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(10,80,140);
+  doc.text(eq+" - Preventive Maintenance Checklist", titleAreaX+titleAreaW/2, 16, {align:"center"});
+  // Freq filter label in header
+  if(_activeFreq !== "ALL"){
+    doc.setFont("helvetica","bold"); doc.setFontSize(6.5); doc.setTextColor(146,64,14);
+    doc.text("Frequency : "+filterLabel, titleAreaX+titleAreaW/2, 21, {align:"center"});
+  }
+
+  var cy = headerH+gapH;
+  var lW=usableW*0.105, vW=usableW*0.228;
+  var infoData=[
+    ["Plant","DEWA-VI","MO No.",mo,"PTW No.",ptw],
+    ["Phase",phase,"MVPS",mvps,"Equipment",eq],
+    ["Equip Sr No.",document.getElementById("equipSr").value||"-","Equip ID",equipId,"Frequency",freq],
+    ["PM Date",date,"Start",document.getElementById("startTime").value||"-","Finish",document.getElementById("finishTime").value||"-"],
+    ["In-Charge",maintIC,"Position",pos,"Reviewed By",rev]
+  ];
+  doc.autoTable({startY:cy,margin:{left:ML,right:MR},head:[],body:infoData,theme:"grid",
+    styles:{fontSize:7,cellPadding:1.4,textColor:[20,30,60]},
+    columnStyles:{0:{fontStyle:"bold",fillColor:[235,240,255],cellWidth:lW},1:{cellWidth:vW},2:{fontStyle:"bold",fillColor:[235,240,255],cellWidth:lW},3:{cellWidth:vW},4:{fontStyle:"bold",fillColor:[235,240,255],cellWidth:lW},5:{cellWidth:"auto"}},
+    tableLineColor:[203,213,225],tableLineWidth:0.25});
+  cy=doc.lastAutoTable.finalY+gapH;
+
+  var isEarthPitsPDF = eq.toUpperCase().includes("EARTH");
+  var ertReserve = isEarthPitsPDF ? 40 : 0;
+  var remarksReserve = overallRemarks ? 22 : 6;
+  var sigY = PH-footerH-sigH-1;
+  var tableAreaH = sigY-cy-gapH-ertReserve-remarksReserve;
+
+  var tableRows2 = useDCB
+    ? dcbD.rows.map(function(r){return [r.sr,r.check,r.req,r.freq].concat(r.dcb).concat([r.remark]);})
+    : rows.map(function(r){return [r.sr,r.check,r.req,r.freq,r.remark||"-"];});
+  var headRowH=6;
+  var remColW = useDCB ? 30 : (usableW-7-9-usableW*0.35-usableW*0.27);
+
+  var szs=[{f:7.5,p:1.8},{f:7.0,p:1.6},{f:6.5,p:1.5},{f:6.0,p:1.4},{f:5.5,p:1.3},{f:5.0,p:1.2},{f:4.5,p:1.0},{f:4.0,p:0.9},{f:3.5,p:0.8},{f:3.0,p:0.7}];
+  var chosenFont=3.0, chosenPad=0.7;
+  for(var si=0;si<szs.length;si++){
+    var s=szs[si];
+    var lineH=s.f*0.352;
+    var charsPerLine=Math.max(1,remColW/(s.f*0.21));
+    var totalEstH=headRowH;
+    for(var ri=0;ri<tableRows2.length;ri++){
+      var remTxt=String(tableRows2[ri][tableRows2[ri].length-1]||"");
+      var estLines=Math.max(1,Math.ceil(remTxt.length/charsPerLine));
+      var chkTxt=String(tableRows2[ri][1]||"");
+      var chkColW=useDCB?50:usableW*0.35;
+      var chkLines=Math.max(1,Math.ceil(chkTxt.length/Math.max(1,chkColW/(s.f*0.21))));
+      var rowLines=Math.max(estLines,chkLines);
+      totalEstH+=s.p*2+lineH*rowLines+0.3;
+    }
+    if(totalEstH<=tableAreaH){chosenFont=s.f;chosenPad=s.p;break;}
+  }
+
+  var headCols, colStyles;
+  if(useDCB){
+    var dcbW=(usableW-7-9-50-38-30)/5;
+    headCols=[{content:"Sr",styles:{halign:"center"}},{content:"Check Point"},{content:"Requirement"},{content:"Freq",styles:{halign:"center"}}].concat(dcbD.serials.map(function(s){return {content:s,styles:{halign:"center"}};})).concat([{content:"Remarks"}]);
+    colStyles={0:{halign:"center",cellWidth:7},1:{cellWidth:50},2:{cellWidth:38},3:{halign:"center",cellWidth:9},4:{halign:"center",cellWidth:dcbW},5:{halign:"center",cellWidth:dcbW},6:{halign:"center",cellWidth:dcbW},7:{halign:"center",cellWidth:dcbW},8:{halign:"center",cellWidth:dcbW},9:{cellWidth:30}};
+  } else {
+    var srW=7,freqW=9,checkW=usableW*0.35,reqW=usableW*0.27,remW=usableW-srW-freqW-checkW-reqW;
+    headCols=[{content:"Sr",styles:{halign:"center"}},{content:"Check Point"},{content:"Requirement"},{content:"Freq",styles:{halign:"center"}},{content:"Remarks / Findings"}];
+    colStyles={0:{halign:"center",cellWidth:srW},1:{cellWidth:checkW},2:{cellWidth:reqW},3:{halign:"center",cellWidth:freqW},4:{cellWidth:remW}};
+  }
+
+  var minCH=chosenPad*2+chosenFont*0.352+0.5;
+  doc.autoTable({startY:cy,margin:{left:ML,right:MR},head:[headCols],body:tableRows2,theme:"striped",
+    headStyles:{fillColor:[10,22,40],textColor:[255,255,255],fontSize:chosenFont,fontStyle:"bold",cellPadding:chosenPad,minCellHeight:headRowH},
+    styles:{fontSize:chosenFont,cellPadding:chosenPad,overflow:"linebreak",valign:"top",lineColor:[220,225,235],lineWidth:0.18,minCellHeight:minCH},
+    columnStyles:colStyles,pageBreak:"avoid",rowPageBreak:"avoid",showHead:"firstPage"});
+  cy=doc.lastAutoTable.finalY+gapH;
+
+  // Battery
+  var battData2=collectBatteryData();
+  if(battData2 && !isEarthPitsPDF){
+    doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(10,22,40);
+    doc.text("Battery Voltage Measurements",ML,cy+3.5); cy+=5;
+    var bColW=usableW/9, bcs2={};
+    for(var bi2=0;bi2<9;bi2++) bcs2[bi2]={halign:"center",cellWidth:bColW,fontStyle:bi2===0?"bold":"normal"};
+    doc.autoTable({startY:cy,margin:{left:ML,right:MR},theme:"grid",head:[["Battery","B-1","B-2","B-3","B-4","B-5","B-6","B-7","B-8"]],body:[["Volts"].concat(battData2.row1)],headStyles:{fillColor:[10,22,40],textColor:[255,255,255],fontSize:6,fontStyle:"bold",cellPadding:1,halign:"center"},styles:{fontSize:6,cellPadding:1},columnStyles:bcs2});
+    cy=doc.lastAutoTable.finalY+1;
+    doc.autoTable({startY:cy,margin:{left:ML,right:MR},theme:"grid",head:[["Battery","B-9","B-10","B-11","B-12","B-13","B-14","B-15","B-16"]],body:[["Volts"].concat(battData2.row2)],headStyles:{fillColor:[10,22,40],textColor:[255,255,255],fontSize:6,fontStyle:"bold",cellPadding:1,halign:"center"},styles:{fontSize:6,cellPadding:1},columnStyles:bcs2});
+    cy=doc.lastAutoTable.finalY+gapH;
+  }
+
+  // ERT
+  var ertData2=collectERTData();
+  if(ertData2){
+    doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(10,22,40);
+    doc.text("ERT Values",ML,cy+3.5); cy+=5;
+    var ertColW=usableW/10, ertCS={};
+    for(var ei=0;ei<10;ei++) ertCS[ei]={halign:"center",cellWidth:ertColW,fontStyle:ei===0?"bold":"normal"};
+    doc.autoTable({startY:cy,margin:{left:ML,right:MR},theme:"grid",head:[["Ep No"].concat(ertData2.labels)],body:[["Value (ohm)"].concat(ertData2.vals)],headStyles:{fillColor:[10,22,40],textColor:[255,255,255],fontSize:6,fontStyle:"bold",cellPadding:1,halign:"center"},styles:{fontSize:6,cellPadding:1},columnStyles:ertCS});
+    cy=doc.lastAutoTable.finalY+2;
+  }
+
+  // Overall Remarks
+  if(overallRemarks){
+    var remFs=useDCB?6:7;
+    var remY=Math.max(cy+1, sigY-remarksReserve-1);
+    var remAreaBot=sigY-3;
+    if(remY < remAreaBot-6){
+      doc.setFillColor(248,250,255); doc.setDrawColor(200,210,230); doc.setLineWidth(0.25);
+      var remLines=doc.splitTextToSize(overallRemarks, usableW-6);
+      var remBoxH=Math.min(6+remLines.length*(remFs*0.38+0.5)+3, remAreaBot-remY);
+      doc.roundedRect(ML,remY,usableW,remBoxH,1,1,"FD");
+      doc.setFont("helvetica","bold"); doc.setFontSize(remFs); doc.setTextColor(10,22,40);
+      doc.text("Overall Remarks / Observations:", ML+2.5, remY+4);
+      doc.setFont("helvetica","normal"); doc.setFontSize(remFs); doc.setTextColor(30,40,70);
+      var lineH2=remFs*0.38+0.5;
+      var maxLines=Math.floor((remBoxH-7)/lineH2);
+      doc.text(remLines.slice(0,maxLines), ML+2.5, remY+4+remFs*0.42+1.5);
+    }
+  }
+
+  // Signatures
+  var sigBoxW=(usableW-8)/3;
+  var sigLabels=["Performed By (Technician)","Submitted By","Reviewed By"];
+  var sigNames=[tech,submit,revBy], sigImgs=[techSig,submitSig,reviewSig];
+  sigLabels.forEach(function(lbl,i){
+    var x=ML+i*(sigBoxW+4);
+    doc.setFillColor(255,255,255); doc.setDrawColor(200,210,225); doc.setLineWidth(0.25);
+    doc.roundedRect(x,sigY,sigBoxW,sigH,1.5,1.5,"FD");
+    doc.setFont("helvetica","bold"); doc.setFontSize(5.5); doc.setTextColor(100,116,139);
+    doc.text(lbl.toUpperCase(),x+2.5,sigY+4.5);
+    doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(10,22,40);
+    doc.text(sigNames[i],x+2.5,sigY+9,{maxWidth:sigBoxW-5});
+    if(sigImgs[i]){
+      try{
+        var imgEl=[document.getElementById("techPreview"),document.getElementById("submitPreview"),document.getElementById("reviewPreview")][i];
+        var natW=imgEl&&imgEl.naturalWidth?imgEl.naturalWidth:200;
+        var natH=imgEl&&imgEl.naturalHeight?imgEl.naturalHeight:80;
+        var maxW=sigBoxW-5, maxH=sigH-14;
+        var drawW=maxW, drawH=maxW*(natH/natW);
+        if(drawH>maxH){drawH=maxH;drawW=maxH*(natW/natH);}
+        var imgX=x+2.5+(maxW-drawW)/2;
+        doc.addImage(sigImgs[i],"PNG",imgX,sigY+11,drawW,drawH,undefined,"FAST");
+      }catch(e){doc.setDrawColor(180,190,210);doc.line(x+2.5,sigY+sigH-4,x+sigBoxW-2.5,sigY+sigH-4);}
+    } else {
+      doc.setDrawColor(180,190,210);doc.setLineWidth(0.2);doc.line(x+2.5,sigY+sigH-4,x+sigBoxW-2.5,sigY+sigH-4);
+      doc.setFontSize(5);doc.setTextColor(180,190,210);doc.text("Signature",x+2.5,sigY+sigH-1.5);
+    }
+  });
+
+  // Footer
+  var footerY=PH-2;
+  doc.setFontSize(5.5); doc.setTextColor(150,160,180);
+  doc.text("Generated: "+new Date().toLocaleString(),ML,footerY);
+  doc.text("DEWA-VI - Phase "+phase+" - MVPS "+mvps+" | Filter: "+filterLabel, PW/2, footerY, {align:"center"});
+  doc.text("1 of 1",PW-MR,footerY,{align:"right"});
+  return doc;
+}
+
+// ================================================================
+// BUILD XLSX BLOB (shared)
+// ================================================================
+function buildXLSXBlob(){
+  if(typeof XLSX==="undefined") return null;
+  var rows=collectFormData(); var dcbD=collectDCBData();
+  var phase=safeStr(document.getElementById("phase").value);
+  var mvps=safeStr(document.getElementById("mvps").value);
+  var eq=safeStr(document.getElementById("equipmentSelect").value);
+  var equipId=safeStr(document.getElementById("equipId").value);
+  var mo=safeStr(document.getElementById("mo").value);
+  var ptw=safeStr(document.getElementById("ptw").value);
+  var date=safeStr(document.getElementById("plannedDate").value);
+  var freq=safeStr(document.getElementById("freq").value);
+  var maintIC=safeStr(document.getElementById("maintIncharge").value);
+  var pos=safeStr(document.getElementById("position").value);
+  var rev=safeStr(document.getElementById("reviewer").value);
+  var tech=safeStr(document.getElementById("tech").value);
+  var submit=safeStr(document.getElementById("submitBy").value);
+  var revBy=safeStr(document.getElementById("reviewBy").value);
+  var filterLabel=activeFilterLabel();
+  var overallRemBlob=safeStr((document.getElementById("overallRemarks")||{}).value||"");
+  var isDCBBlob = dcbD && dcbD.rows && dcbD.rows.length > 0;
+  var numCols = isDCBBlob ? 10 : 6;
+  var pad=function(arr){while(arr.length<numCols)arr.push("");return arr;};
+  var D2=[];
+  D2.push(pad(["MBRSP-DEWA VI - 1800MW Solar PV Power Plant"]));
+  D2.push(pad([eq+" - Preventive Maintenance Checklist"]));
+  D2.push(pad(["Frequency Filter: "+filterLabel]));
+  D2.push(pad([]));
+  D2.push(pad(["Plant","DEWA-VI","MO No.",mo,"PTW No.",ptw]));
+  D2.push(pad(["Phase",phase,"MVPS",mvps,"Equipment",eq]));
+  D2.push(pad(["Equip Sr",safeStr(document.getElementById("equipSr").value)||"-","Equip ID",equipId||"-","Frequency",freq||"-"]));
+  D2.push(pad(["Planned Date",date||"-","Start",safeStr(document.getElementById("startTime").value)||"-","Finish",safeStr(document.getElementById("finishTime").value)||"-"]));
+  D2.push(pad(["In-Charge",maintIC,"Position",pos,"Reviewed By",rev]));
+  D2.push(pad([]));
+  if(isDCBBlob){
+    D2.push(["Sr No","Check Point","Requirement","Freq"].concat(dcbD.serials).concat(["Remarks"]));
+    dcbD.rows.forEach(function(r){D2.push([safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq)].concat(r.dcb.map(safeStr)).concat([safeStr(r.remark)]));});
+  } else {
+    D2.push(["Sr No","Check Point","Requirement","Frequency","Remarks","Status"]);
+    rows.forEach(function(r){
+      var rem=safeStr(r.remark); var rl=rem.toLowerCase();
+      var st=rem?(rl.includes("ok")||rl.includes("good")||rl.includes("clean")?"OK":rl.includes("not")||rl.includes("fail")||rl.includes("damage")?"NOT OK":"Done"):"";
+      D2.push([safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq),rem,st]);
+    });
+  }
+  var battData3=collectBatteryData();
+  var isEP3=eq.toUpperCase().includes("EARTH");
+  if(battData3&&!isEP3){D2.push([""],[" BATTERY VOLTAGE"],["Battery","B-1","B-2","B-3","B-4","B-5","B-6","B-7","B-8"],["Volts"].concat(battData3.row1),["Battery","B-9","B-10","B-11","B-12","B-13","B-14","B-15","B-16"],["Volts"].concat(battData3.row2));}
+  var ertData3=collectERTData();
+  if(ertData3){D2.push([""],[" ERT VALUES (Ohm)"],["Ep No"].concat(ertData3.labels),["Value (ohm)"].concat(ertData3.vals));if(ertData3.remarks)D2.push(["Remarks",ertData3.remarks]);}
+  if(overallRemBlob){D2.push(pad([""]),pad([" OVERALL REMARKS"]),pad(["",overallRemBlob]));}
+  D2.push(pad([""]),pad([" AUTHORISATION"]),pad(["Performed By",tech]),pad(["Submitted By",submit]),pad(["Reviewed By",revBy]),pad([""]),pad(["Generated:",new Date().toLocaleString()]));
+  var wb3=XLSX.utils.book_new();
+  var ws3=XLSX.utils.aoa_to_sheet(D2);
+  var ncols3=isDCBBlob?10:6;
+  ws3["!ref"]=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:D2.length-1,c:ncols3-1}});
+  if(isDCBBlob){ws3["!cols"]=[{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];}
+  else{ws3["!cols"]=[{wch:18},{wch:50},{wch:36},{wch:12},{wch:40},{wch:10}];}
+  XLSX.utils.book_append_sheet(wb3,"PM Checklist",ws3);
+  if(isDCBBlob){
+    var dcbHdrs=["Sr No","Check Point","Requirement","Frequency"].concat(dcbD.serials).concat(["Remarks"]);
+    var dcbRws=dcbD.rows.map(function(r){var row=[safeStr(r.sr),safeStr(r.check),safeStr(r.req),safeStr(r.freq)].concat((r.dcb||[]).map(safeStr)).concat([safeStr(r.remark)]);while(row.length<10)row.push("");return row;});
+    var allDCBRows=[dcbHdrs].concat(dcbRws);
+    var wsDCB=XLSX.utils.aoa_to_sheet(allDCBRows);
+    wsDCB["!ref"]=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:allDCBRows.length-1,c:9}});
+    wsDCB["!cols"]=[{wch:6},{wch:55},{wch:38},{wch:8},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:30}];
+    XLSX.utils.book_append_sheet(wb3,"DCB Data",wsDCB);
+  }
+  var srcRows=isDCBBlob?dcbD.rows:rows;
+  var impHdrs=["Area Name","Equipment ID","Planned Date","Actual Date","Freq Filter"];
+  srcRows.forEach(function(r){impHdrs.push("Item "+safeStr(r.sr)+": "+safeStr(r.check).substring(0,28));});
+  impHdrs.push("Checked By","Reviewed By","Overall Remarks");
+  var impRow=[eq,equipId||"-",date||"-","",filterLabel];
+  srcRows.forEach(function(r){impRow.push(isDCBBlob?(r.dcb||[]).map(safeStr).filter(function(v){return v;}).join(" | ")||"":safeStr(r.remark));});
+  impRow.push(maintIC,rev,overallRemBlob);
+  var wsImp=XLSX.utils.aoa_to_sheet([impHdrs,impRow]);
+  wsImp["!cols"]=impHdrs.map(function(_,i){return {wch:i<5?18:24};});
+  XLSX.utils.book_append_sheet(wb3,"Data Import",wsImp);
+  var ab=XLSX.write(wb3,{bookType:"xlsx",type:"array"});
+  return new Uint8Array(ab);
+}
+
+// ================================================================
+// BUILD CSV BLOB (shared)
+// ================================================================
+function buildCSVBlob(){
+  function csvEsc(v){var s=String(v==null?"":v).replace(/"/g,'""');return /[",\n\r]/.test(s)?'"'+s+'"':s;}
+  var rows2=collectFormData(); var dcbD2=collectDCBData();
+  var lines=["Frequency Filter: "+activeFilterLabel(),""];
+  if(dcbD2&&dcbD2.rows.length>0){
+    lines.push(["Sr No","Check Point","Requirement","Freq"].concat(dcbD2.serials).concat(["Remarks"]).map(csvEsc).join(","));
+    dcbD2.rows.forEach(function(r){lines.push([r.sr,r.check,r.req,r.freq].concat(r.dcb).concat([r.remark]).map(csvEsc).join(","));});
+  } else {
+    lines.push(["Sr No","Check Point","Requirement","Frequency","Remarks"].map(csvEsc).join(","));
+    rows2.forEach(function(r){lines.push([r.sr,r.check,r.req,r.freq,r.remark].map(csvEsc).join(","));});
+  }
+  return new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+}
+
+// ================================================================
+// DRAFT SAVE / RESTORE
+// ================================================================
+function saveDraft(){
+  try{
+    var draft={};
+    ["mo","ptw","equipSr","equipId","freq","plannedDate","startTime","finishTime",
+     "phase","mvps","equipmentSelect","maintIncharge","position","reviewer",
+     "tech","submitBy","reviewBy"].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) draft[id]=el.value;
+    });
+    draft["_activeFreq"] = _activeFreq;
+    var or=document.getElementById("overallRemarks");
+    if(or) draft["overallRemarks"]=or.value;
+    var er=document.getElementById("ertRemarks");
+    if(er) draft["ertRemarks"]=er.value;
+    var tas=document.querySelectorAll("#checklistBody textarea");
+    var taVals=[];
+    tas.forEach(function(ta){taVals.push(ta.value);});
+    draft["__ta"]=taVals;
+    var sels=document.querySelectorAll("#checklistBody select");
+    var selVals=[];
+    sels.forEach(function(s){selVals.push(s.value);});
+    draft["__sel"]=selVals;
+    var dcbInputs=document.querySelectorAll(".dcb-serial-input");
+    var dcbVals=[];
+    dcbInputs.forEach(function(i){dcbVals.push(i.value);});
+    draft["__dcbSr"]=dcbVals;
+    var battInputs=document.querySelectorAll("input.battery-input, input.ert-input");
+    var battVals=[];
+    battInputs.forEach(function(i){battVals.push(i.value);});
+    draft["__batt"]=battVals;
+    sessionStorage.setItem("pmDraft",JSON.stringify(draft));
+  }catch(e){}
+}
+
+function restoreDraft(){
+  try{
+    var raw=sessionStorage.getItem("pmDraft");
+    if(!raw) return false;
+    var draft=JSON.parse(raw);
+    ["mo","ptw","equipSr","equipId","freq","plannedDate","startTime","finishTime",
+     "phase","maintIncharge","position","reviewer","tech","submitBy","reviewBy"].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el&&draft[id]!==undefined) el.value=draft[id];
+    });
+    var or2=document.getElementById("overallRemarks");
+    if(or2&&draft["overallRemarks"]){or2.value=draft["overallRemarks"];autoResize(or2);}
+    return draft;
+  }catch(e){return false;}
+}
+
+function restoreDraftChecklist(draft){
+  if(!draft) return;
+  try{
+    if(draft["__ta"]){
+      var tas=document.querySelectorAll("#checklistBody textarea");
+      draft["__ta"].forEach(function(v,i){if(tas[i]){tas[i].value=v;autoResize(tas[i]);}});
+    }
+    if(draft["__sel"]){
+      var sels=document.querySelectorAll("#checklistBody select");
+      draft["__sel"].forEach(function(v,i){if(sels[i])sels[i].value=v;});
+    }
+    if(draft["__dcbSr"]){
+      var dcbInputs=document.querySelectorAll(".dcb-serial-input");
+      draft["__dcbSr"].forEach(function(v,i){if(dcbInputs[i])dcbInputs[i].value=v;});
+    }
+    if(draft["__batt"]){
+      var battInputs=document.querySelectorAll("input.battery-input, input.ert-input");
+      draft["__batt"].forEach(function(v,i){if(battInputs[i])battInputs[i].value=v;});
+    }
+    var er2=document.getElementById("ertRemarks");
+    if(er2&&draft["ertRemarks"]){er2.value=draft["ertRemarks"];autoResize(er2);}
+    // Restore filter state
+    if(draft["_activeFreq"]){
+      _activeFreq=draft["_activeFreq"];
+      document.querySelectorAll(".freq-filter-pill").forEach(function(p){
+        p.classList.remove("active");
+        if(p.dataset.freq===_activeFreq) p.classList.add("active");
+      });
+      applyFreqFilter();
+    }
+  }catch(e){}
+}
+
+function showOverlay(msg){
+  document.getElementById("overlayMsg").textContent=msg;
+  document.getElementById("overlay").classList.add("visible");
+}
+function hideOverlay(){
+  document.getElementById("overlay").classList.remove("visible");
+}
+</script>
+</body>
+</html>
